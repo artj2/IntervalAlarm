@@ -131,7 +131,7 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\ar
 	android:supportsRtl
 		ADDED from C:\Users\artiz\AndroidStudioProjects\IntervalAlarm\app\src\main\AndroidManifest.xml:19:9-35
 	android:label
-		ADDED from C:\Users\artiz\AndroidStudioProjects\IntervalAlarm\app\src\main\AndroidManifest.xml:18:9-39
+		ADDED from C:\Users\artiz\AndroidStudioProjects\IntervalAlarm\app\src\main\AndroidManifest.xml:18:9-41
 	android:theme
 		ADDED from C:\Users\artiz\AndroidStudioProjects\IntervalAlarm\app\src\main\AndroidManifest.xml:20:9-77
 	android:name
