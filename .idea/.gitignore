@@ -1,3 +1,5 @@
 # Default ignored files
 /shelf/
 /workspace.xml
+app\build\intermediates\apk\debug\app-debug.apk
+app/build/intermediates/apk/debug/app-debug.apk
