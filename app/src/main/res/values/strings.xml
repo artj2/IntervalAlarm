@@ -2,4 +2,51 @@
 <resources>
     <string name="app_name">Training Milo</string>
     <string name="attribution_alarm_firing">Alarm sound and vibration</string>
+
+    <!-- Navigation -->
+    <string name="nav_alarm">Alarm</string>
+    <string name="nav_history">History</string>
+
+    <!-- Home Screen -->
+    <string name="status_active">Alarm Active</string>
+    <string name="status_inactive">Alarm Inactive</string>
+    <string name="running_range">Running from %1$s to %2$s</string>
+    <string name="btn_start">Start</string>
+    <string name="btn_stop">Stop</string>
+    <string name="time_window">Time Window</string>
+    <string name="label_start">Start</string>
+    <string name="label_end">End</string>
+    <string name="interval_range">Interval Range (minutes)</string>
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
+    <string name="section_alerts">Alerts</string>
+    <string name="alert_notif">Notification</string>
+    <string name="alert_sound">Sound</string>
+    <string name="alert_vibration">Vibration</string>
+    <string name="btn_change">Change</string>
+    <string name="sound_custom">Custom</string>
+    <string name="sound_default">Default alarm tone</string>
+    <string name="section_repeat">Repeat Days</string>
+    <string name="repeat_hint">Leave all unselected for manual start/stop only</string>
+    <string name="warning_window_too_small">Warning: minimum interval is longer than the time window</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- History Screen -->
+    <string name="history_empty">No alarms fired yet</string>
+    <string name="btn_clear_all">Clear All</string>
+    <string name="dialog_clear_title">Clear History</string>
+    <string name="dialog_clear_msg">Delete all alarm history entries? This cannot be undone.</string>
+    <string name="btn_clear">Clear</string>
+
+    <!-- Alarm Firing -->
+    <string name="notif_firing_title">Alarm firing…</string>
+    <string name="notif_alarm_title">Interval Alarm</string>
+    <string name="notif_alarm_text">Alarm fired! Tap dismiss to stop.</string>
+    <string name="btn_dismiss">Dismiss</string>
+
+    <plurals name="alarms_logged">
+        <item quantity="one">%1$d alarm logged</item>
+        <item quantity="other">%1$d alarms logged</item>
+    </plurals>
 </resources>

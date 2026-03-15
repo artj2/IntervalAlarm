@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.intervalalarm.ui.AlarmViewModel
@@ -60,14 +61,14 @@ private fun AppContent(vm: AlarmViewModel = viewModel()) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Alarm") },
-                    label = { Text("Alarm") }
+                    icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.nav_alarm)) },
+                    label = { Text(stringResource(R.string.nav_alarm)) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "History") },
-                    label = { Text("History") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = stringResource(R.string.nav_history)) },
+                    label = { Text(stringResource(R.string.nav_history)) }
                 )
             }
         }

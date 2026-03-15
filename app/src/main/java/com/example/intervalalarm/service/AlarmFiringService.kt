@@ -10,14 +10,20 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.*
+import android.os.CombinedVibration
+import android.os.IBinder
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import com.example.intervalalarm.IntervalAlarmApp
 import com.example.intervalalarm.MainActivity
 import com.example.intervalalarm.alarm.AlarmScheduler
 import com.example.intervalalarm.data.AlarmHistoryDatabase
 import com.example.intervalalarm.data.AlarmHistoryEntry
 import com.example.intervalalarm.data.AlarmPreferences
+import com.example.intervalalarm.R
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
@@ -47,7 +53,7 @@ class AlarmFiringService : Service() {
             NOTIF_ID_SERVICE,
             NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_SERVICE)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle("Alarm firing…")
+                .setContentTitle(getString(R.string.notif_firing_title))
                 .setSilent(true)
                 .build(),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
@@ -111,13 +117,13 @@ class AlarmFiringService : Service() {
 
         val notif = NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_ALARM)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Interval Alarm")
-            .setContentText("Alarm fired! Tap dismiss to stop.")
+            .setContentTitle(getString(R.string.notif_alarm_title))
+            .setContentText(getString(R.string.notif_alarm_text))
             .setContentIntent(tapIntent)
             .setOngoing(true)
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
-                "Dismiss",
+                getString(R.string.btn_dismiss),
                 dismissIntent
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -128,25 +134,22 @@ class AlarmFiringService : Service() {
     }
 
     private fun startVibration() {
-        val handler = Handler(Looper.getMainLooper())
-        handler.post {
-            val vm = attributedContext.getSystemService(VibratorManager::class.java)
-            vibratorManager = vm
-            val effect = VibrationEffect.createWaveform(
-                longArrayOf(0, 400, 200, 400, 200, 400, 600),
-                0 // repeat from index 0
-            )
-            val combined = CombinedVibration.createParallel(effect)
-            val attrs = VibrationAttributes.Builder()
-                .setUsage(VibrationAttributes.USAGE_ALARM)
-                .build()
-            vm.vibrate(combined, attrs)
-        }
+        val vm = attributedContext.getSystemService(VibratorManager::class.java)
+        vibratorManager = vm
+        val effect = VibrationEffect.createWaveform(
+            longArrayOf(0, 400, 200, 400, 200, 400, 600),
+            0 // repeat from index 0
+        )
+        val combined = CombinedVibration.createParallel(effect)
+        val attrs = VibrationAttributes.Builder()
+            .setUsage(VibrationAttributes.USAGE_ALARM)
+            .build()
+        vm.vibrate(combined, attrs)
     }
 
     private fun startSound(uriStr: String?) {
         val uri: Uri = if (uriStr != null) {
-            Uri.parse(uriStr)
+            uriStr.toUri()
         } else {
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)

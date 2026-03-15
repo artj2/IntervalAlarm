@@ -8,6 +8,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.example.intervalalarm.R
 import com.example.intervalalarm.data.AlarmHistoryEntry
 import com.example.intervalalarm.ui.AlarmViewModel
 import java.time.Instant
@@ -29,12 +32,12 @@ fun HistoryScreen(vm: AlarmViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "${entries.size} alarm${if (entries.size != 1) "s" else ""} logged",
+                    pluralStringResource(R.plurals.alarms_logged, entries.size, entries.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 TextButton(onClick = { showClearDialog = true }) {
-                    Text("Clear All", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.btn_clear_all), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -45,7 +48,7 @@ fun HistoryScreen(vm: AlarmViewModel) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "No alarms fired yet",
+                    stringResource(R.string.history_empty),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -65,19 +68,19 @@ fun HistoryScreen(vm: AlarmViewModel) {
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear History") },
-            text = { Text("Delete all alarm history entries? This cannot be undone.") },
+            title = { Text(stringResource(R.string.dialog_clear_title)) },
+            text = { Text(stringResource(R.string.dialog_clear_msg)) },
             confirmButton = {
                 TextButton(onClick = {
                     vm.clearHistory()
                     showClearDialog = false
                 }) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.btn_clear), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.dialog_cancel))
                 }
             }
         )

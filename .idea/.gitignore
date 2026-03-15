@@ -3,3 +3,39 @@
 /workspace.xml
 app\build\intermediates\apk\debug\app-debug.apk
 app/build/intermediates/apk/debug/app-debug.apk
+
+# Built application files
+*.apk
+*.aab
+*.ap_
+
+# Local configuration file (SDK path, etc)
+local.properties
+
+# Gradle cache and generated build files
+.gradle/
+/build/
+*/build/
+
+# NDK / C++ builds
+.cxx/
+
+# Keystore files
+*.jks
+*.keystore
+
+# IntelliJ / Android Studio workspace files
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/caches
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Captures (Android Studio Profiler)
+/captures/

@@ -18,6 +18,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.example.intervalalarm.R
 import com.example.intervalalarm.ui.AlarmViewModel
 import java.time.DayOfWeek
 import java.time.format.TextStyle
@@ -33,9 +35,7 @@ fun HomeScreen(vm: AlarmViewModel) {
     val ringtoneLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        @Suppress("DEPRECATION")
-        val uri = result.data
-            ?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+        val uri = result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
         vm.updateConfig { copy(soundUri = uri?.toString()) }
     }
 
@@ -63,12 +63,12 @@ fun HomeScreen(vm: AlarmViewModel) {
             ) {
                 Column {
                     Text(
-                        if (cfg.isActive) "Alarm Active" else "Alarm Inactive",
+                        if (cfg.isActive) stringResource(R.string.status_active) else stringResource(R.string.status_inactive),
                         style = MaterialTheme.typography.titleMedium
                     )
                     if (cfg.isActive) {
                         Text(
-                            "Running from ${fmtTime(cfg.startHour, cfg.startMinute)} to ${fmtTime(cfg.endHour, cfg.endMinute)}",
+                            stringResource(R.string.running_range, fmtTime(cfg.startHour, cfg.startMinute), fmtTime(cfg.endHour, cfg.endMinute)),
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -80,19 +80,19 @@ fun HomeScreen(vm: AlarmViewModel) {
                         contentColor = MaterialTheme.colorScheme.onError
                     ) else ButtonDefaults.filledTonalButtonColors()
                 ) {
-                    Text(if (cfg.isActive) "Stop" else "Start")
+                    Text(if (cfg.isActive) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start))
                 }
             }
         }
 
         // Time Window
-        Text("Time Window", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.time_window), style = MaterialTheme.typography.titleSmall)
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             TimePickerCard(
-                label = "Start",
+                label = stringResource(R.string.label_start),
                 hour = cfg.startHour,
                 minute = cfg.startMinute,
                 enabled = !cfg.isActive,
@@ -100,7 +100,7 @@ fun HomeScreen(vm: AlarmViewModel) {
                 modifier = Modifier.weight(1f)
             )
             TimePickerCard(
-                label = "End",
+                label = stringResource(R.string.label_end),
                 hour = cfg.endHour,
                 minute = cfg.endMinute,
                 enabled = !cfg.isActive,
@@ -110,13 +110,13 @@ fun HomeScreen(vm: AlarmViewModel) {
         }
 
         // Interval Range
-        Text("Interval Range (minutes)", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.interval_range), style = MaterialTheme.typography.titleSmall)
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             IntervalField(
-                label = "Min",
+                label = stringResource(R.string.label_min),
                 configValue = cfg.minIntervalMin,
                 enabled = !cfg.isActive,
                 onCommit = { v ->
@@ -125,7 +125,7 @@ fun HomeScreen(vm: AlarmViewModel) {
                 modifier = Modifier.weight(1f)
             )
             IntervalField(
-                label = "Max",
+                label = stringResource(R.string.label_max),
                 configValue = cfg.maxIntervalMin,
                 enabled = !cfg.isActive,
                 onCommit = { v ->
@@ -136,25 +136,27 @@ fun HomeScreen(vm: AlarmViewModel) {
         }
 
         // Alert Toggles
-        Text("Alerts", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.section_alerts), style = MaterialTheme.typography.titleSmall)
         Card {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                ToggleRow("Notification", cfg.notificationEnabled) {
+                ToggleRow(stringResource(R.string.alert_notif), cfg.notificationEnabled) {
                     vm.updateConfig { copy(notificationEnabled = it) }
                 }
                 HorizontalDivider()
-                ToggleRow("Sound", cfg.soundEnabled) {
+                ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled) {
                     vm.updateConfig { copy(soundEnabled = it) }
                 }
                 if (cfg.soundEnabled) {
                     val currentUri = cfg.soundUri
+                    val customStr = stringResource(R.string.sound_custom)
+                    val defaultStr = stringResource(R.string.sound_default)
                     val soundName = remember(currentUri) {
                         if (currentUri != null) {
                             try {
                                 val r = RingtoneManager.getRingtone(ctx, currentUri.toUri())
-                                r?.getTitle(ctx) ?: "Custom"
-                            } catch (_: Exception) { "Custom" }
-                        } else "Default alarm tone"
+                                r?.getTitle(ctx) ?: customStr
+                            } catch (_: Exception) { customStr }
+                        } else defaultStr
                     }
                     Row(
                         modifier = Modifier
@@ -178,21 +180,21 @@ fun HomeScreen(vm: AlarmViewModel) {
                             }
                             ringtoneLauncher.launch(intent)
                         }) {
-                            Text("Change")
+                            Text(stringResource(R.string.btn_change))
                         }
                     }
                 }
                 HorizontalDivider()
-                ToggleRow("Vibration", cfg.vibrationEnabled) {
+                ToggleRow(stringResource(R.string.alert_vibration), cfg.vibrationEnabled) {
                     vm.updateConfig { copy(vibrationEnabled = it) }
                 }
             }
         }
 
         // Repeat Days
-        Text("Repeat Days", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.section_repeat), style = MaterialTheme.typography.titleSmall)
         Text(
-            "Leave all unselected for manual start/stop only",
+            stringResource(R.string.repeat_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -226,7 +228,7 @@ fun HomeScreen(vm: AlarmViewModel) {
         // Validation hint
         if (cfg.windowMinutes < cfg.minIntervalMin) {
             Text(
-                "Warning: minimum interval is longer than the time window",
+                stringResource(R.string.warning_window_too_small),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -283,17 +285,16 @@ private fun TimePickerCard(
     }
 
     if (showDialog) {
-        fun dismiss() { showDialog = false }
         AlertDialog(
-            onDismissRequest = { dismiss() },
+            onDismissRequest = { showDialog = false },
             confirmButton = {
                 TextButton(onClick = {
                     onPick(tpState.hour, tpState.minute)
-                    dismiss()
-                }) { Text("OK") }
+                    showDialog = false
+                }) { Text(stringResource(R.string.dialog_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { dismiss() }) { Text("Cancel") }
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.dialog_cancel)) }
             },
             text = { TimePicker(state = tpState) }
         )
