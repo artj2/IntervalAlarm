@@ -42,13 +42,11 @@ class AlarmFiringService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Handle dismiss action
         if (intent?.action == ACTION_DISMISS) {
             stopAlarm()
             return START_NOT_STICKY
         }
 
-        // Immediately go foreground
         startForeground(
             NOTIF_ID_SERVICE,
             NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_SERVICE)
@@ -67,26 +65,21 @@ class AlarmFiringService : Service() {
                     return@launch
                 }
 
-                // Log to history
                 AlarmHistoryDatabase.get(this@AlarmFiringService).dao()
                     .insert(AlarmHistoryEntry())
 
-                // Show alarm notification with dismiss button
                 if (cfg.notificationEnabled) {
                     showAlarmNotification()
                 }
 
-                // Start vibration (repeating)
                 if (cfg.vibrationEnabled) {
                     startVibration()
                 }
 
-                // Start sound (looping)
                 if (cfg.soundEnabled) {
                     startSound(cfg.soundUri)
                 }
 
-                // If all alerts are off, just schedule next
                 if (!cfg.notificationEnabled && !cfg.soundEnabled && !cfg.vibrationEnabled) {
                     scheduleNextAndStop()
                 }
@@ -138,7 +131,7 @@ class AlarmFiringService : Service() {
         vibratorManager = vm
         val effect = VibrationEffect.createWaveform(
             longArrayOf(0, 400, 200, 400, 200, 400, 600),
-            0 // repeat from index 0
+            0
         )
         val combined = CombinedVibration.createParallel(effect)
         val attrs = VibrationAttributes.Builder()
@@ -148,12 +141,9 @@ class AlarmFiringService : Service() {
     }
 
     private fun startSound(uriStr: String?) {
-        val uri: Uri = if (uriStr != null) {
-            uriStr.toUri()
-        } else {
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        }
+        val uri: Uri = uriStr?.toUri()
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
         try {
             mediaPlayer = MediaPlayer().apply {
@@ -178,29 +168,25 @@ class AlarmFiringService : Service() {
     }
 
     private fun stopAlarm() {
-        // Stop sound safely
-        try {
-            mediaPlayer?.let {
+        mediaPlayer?.let {
+            try {
                 it.setOnCompletionListener(null)
                 it.setOnErrorListener(null)
                 if (it.isPlaying) it.stop()
                 it.reset()
                 it.release()
+            } catch (e: Exception) {
+                android.util.Log.e("AlarmFiring", "Error stopping MediaPlayer", e)
             }
-        } catch (e: Exception) {
-            android.util.Log.e("AlarmFiring", "Error stopping MediaPlayer", e)
         }
         mediaPlayer = null
 
-        // Stop vibration
         vibratorManager?.cancel()
         vibratorManager = null
 
-        // Clear notification
         val nm = getSystemService(NotificationManager::class.java)
         nm.cancel(NOTIF_ID_ALARM)
 
-        // Schedule next alarm
         scope.launch {
             try {
                 val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
@@ -227,15 +213,15 @@ class AlarmFiringService : Service() {
     }
 
     override fun onDestroy() {
-        try {
-            mediaPlayer?.let {
+        mediaPlayer?.let {
+            try {
                 it.setOnCompletionListener(null)
                 it.setOnErrorListener(null)
                 if (it.isPlaying) it.stop()
                 it.reset()
                 it.release()
-            }
-        } catch (_: Exception) {}
+            } catch (_: Exception) {}
+        }
         mediaPlayer = null
         vibratorManager?.cancel()
         vibratorManager = null

@@ -1,0 +1,66 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:translateX="0"
+        android:translateY="4">
+
+        <!-- Simple Outline of the Dog -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M38,35
+                              L70,35
+                              C75,35 78,45 74,65
+                              L65,88
+                              L43,88
+                              L34,65
+                              C30,45 33,35 38,35
+                              Z" />
+
+        <!-- Simple Outline of the Ears -->
+        <!-- Left Ear -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M38,38 L25,30 L45,25" />
+        <!-- Right Ear -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M70,38 L83,30 L63,25" />
+
+        <!-- Snout Patch Outline -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:pathData="M50,55 L58,55 L60,82 L48,82 Z" />
+
+        <!-- Simple Eyes -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M44,50 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M60,50 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
+
+        <!-- Harness/Collar Line -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:pathData="M35,92 C40,100 68,100 73,92" />
+
+    </group>
+
+</vector>

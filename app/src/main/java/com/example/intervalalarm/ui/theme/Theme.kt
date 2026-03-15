@@ -11,13 +11,11 @@ fun IntervalAlarmTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-
-    // Dynamic color may not work on all emulators — fall back gracefully
-    val colorScheme = try {
-        if (darkTheme) dynamicDarkColorScheme(context)
-        else dynamicLightColorScheme(context)
-    } catch (_: Exception) {
-        if (darkTheme) darkColorScheme() else lightColorScheme()
+    
+    val colorScheme = if (darkTheme) {
+        dynamicDarkColorScheme(context)
+    } else {
+        dynamicLightColorScheme(context)
     }
 
     MaterialTheme(
