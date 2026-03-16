@@ -36,7 +36,7 @@ abstract class AlarmHistoryDatabase : RoomDatabase() {
                     ctx.applicationContext,
                     AlarmHistoryDatabase::class.java,
                     "alarm_history.db"
-                ).fallbackToDestructiveMigration()
+                ).fallbackToDestructiveMigration(dropAllTables = true)
                     .build().also { INSTANCE = it }
             }
     }
