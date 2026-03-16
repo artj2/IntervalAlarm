@@ -18,7 +18,7 @@ class IntervalAlarmApp : Application() {
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ALARM,
-                "Alarm Notifications",
+                getString(R.string.channel_alarm_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 setSound(null, null)
@@ -29,7 +29,7 @@ class IntervalAlarmApp : Application() {
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_SERVICE,
-                "Alarm Service",
+                getString(R.string.channel_service_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 setSound(null, null)

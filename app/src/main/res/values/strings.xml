@@ -45,6 +45,10 @@
     <string name="notif_alarm_text">Alarm fired! Tap dismiss to stop.</string>
     <string name="btn_dismiss">Dismiss</string>
 
+    <!-- Notification Channels -->
+    <string name="channel_alarm_name">Alarm Notifications</string>
+    <string name="channel_service_name">Alarm Service</string>
+
     <plurals name="alarms_logged">
         <item quantity="one">%1$d alarm logged</item>
         <item quantity="other">%1$d alarms logged</item>

@@ -67,11 +67,17 @@ object AlarmScheduler {
         }
 
         val am = ctx.getSystemService(AlarmManager::class.java)
-        am.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            triggerAt,
-            makePendingIntent(ctx)
-        )
+        if (am.canScheduleExactAlarms()) {
+            am.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAt,
+                makePendingIntent(ctx)
+            )
+        } else {
+            // Fallback or log warning. Since USE_EXACT_ALARM is in manifest,
+            // this usually shouldn't happen unless restricted by battery saver/system.
+            android.util.Log.w("AlarmScheduler", "Cannot schedule exact alarms")
+        }
     }
 
     fun scheduleNextWindow(ctx: Context, cfg: AlarmConfig) {
@@ -81,11 +87,15 @@ object AlarmScheduler {
         }
 
         val am = ctx.getSystemService(AlarmManager::class.java)
-        am.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            next,
-            makePendingIntent(ctx)
-        )
+        if (am.canScheduleExactAlarms()) {
+            am.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                next,
+                makePendingIntent(ctx)
+            )
+        } else {
+            android.util.Log.w("AlarmScheduler", "Cannot schedule exact alarms")
+        }
     }
 
     fun cancel(ctx: Context) {
