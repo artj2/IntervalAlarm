@@ -19,7 +19,7 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 val cfg = AlarmPreferences.configFlow(ctx).first()
                 if (cfg.isActive) {
-                    AlarmScheduler.scheduleNextWindow(ctx, cfg)
+                    AlarmScheduler.schedule(ctx, cfg)
                 }
             } finally {
                 pending.finish()

@@ -46,14 +46,14 @@ object AlarmScheduler {
             }
         }
 
-        if (cfg.repeatDays.isNotEmpty()) {
-            for (d in 1..7) {
-                val candidate = from.toLocalDate().plusDays(d.toLong())
-                if (cfg.repeatDays.contains(candidate.dayOfWeek.value)) {
-                    val start = candidate.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
-                    val offsetMs = Random.nextLong(0, cfg.minIntervalMin * 60_000L + 1)
-                    return start.toInstant().toEpochMilli() + offsetMs
-                }
+        // Check subsequent days
+        for (d in 1..7) {
+            val candidateDate = from.toLocalDate().plusDays(d.toLong())
+            val candidateDow = candidateDate.dayOfWeek.value
+            if (cfg.repeatDays.isEmpty() || cfg.repeatDays.contains(candidateDow)) {
+                val start = candidateDate.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+                val offsetMs = Random.nextLong(0, cfg.minIntervalMin * 60_000L + 1)
+                return start.toInstant().toEpochMilli() + offsetMs
             }
         }
 
