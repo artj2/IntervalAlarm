@@ -41,8 +41,8 @@
 
     <!-- Alarm Firing -->
     <string name="notif_firing_title">Alarm firing…</string>
-    <string name="notif_alarm_title">Interval Alarm</string>
-    <string name="notif_alarm_text">Alarm fired! Tap dismiss to stop.</string>
+    <string name="notif_alarm_title">Training Milo</string>
+    <string name="notif_alarm_text">Go outside</string>
     <string name="btn_dismiss">Dismiss</string>
 
     <!-- Notification Channels -->
