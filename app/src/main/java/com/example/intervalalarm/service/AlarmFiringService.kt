@@ -116,10 +116,11 @@ class AlarmFiringService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val acceptIntent = PendingIntent.getService(
+        val acceptIntent = PendingIntent.getActivity(
             this, 2,
-            Intent(this, AlarmFiringService::class.java).apply {
-                action = ACTION_ACCEPT
+            Intent(this, MainActivity::class.java).apply {
+                action = "com.example.intervalalarm.ACTION_ACCEPT_FROM_NOTIF"
+                putExtra("navigate_to_timer", true)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )

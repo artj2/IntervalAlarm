@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -64,14 +65,29 @@ enum class Screen { HOME, HISTORY, TIMER }
 @Composable
 private fun AppContent(intent: Intent, vm: AlarmViewModel = viewModel()) {
     var selectedTab by remember { mutableStateOf(Screen.HOME) }
+    val ctx = LocalContext.current
     
     // Check if we should navigate to timer from intent or if service is already running
     val remaining by TimerService.remainingSeconds.collectAsState()
     val isFinished by TimerService.isFinished.collectAsState()
     
     LaunchedEffect(intent, remaining, isFinished) {
-        if (intent.getBooleanExtra("navigate_to_timer", false) || remaining > 0 || isFinished) {
+        val action = intent.action
+        if (action == "com.example.intervalalarm.ACTION_ACCEPT_FROM_NOTIF") {
+            val startIntent = Intent(ctx, com.example.intervalalarm.service.AlarmFiringService::class.java).apply {
+                this.action = com.example.intervalalarm.service.AlarmFiringService.ACTION_ACCEPT
+            }
+            ctx.startForegroundService(startIntent)
             selectedTab = Screen.TIMER
+            intent.action = null // Clear to prevent re-trigger
+        } else if (intent.getBooleanExtra("navigate_to_timer", false) || remaining > 0 || isFinished) {
+            selectedTab = Screen.TIMER
+        }
+    }
+
+    LaunchedEffect(remaining, isFinished) {
+        if (remaining == 0L && !isFinished && selectedTab == Screen.TIMER) {
+            selectedTab = Screen.HOME
         }
     }
 

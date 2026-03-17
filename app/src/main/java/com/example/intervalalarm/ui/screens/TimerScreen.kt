@@ -105,6 +105,19 @@ fun TimerScreen(onReturn: () -> Unit) {
                 Button(
                     onClick = {
                         val intent = Intent(ctx, TimerService::class.java).apply {
+                            action = TimerService.ACTION_SUCCESS
+                        }
+                        ctx.startService(intent)
+                        onReturn()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.btn_success))
+                }
+
+                Button(
+                    onClick = {
+                        val intent = Intent(ctx, TimerService::class.java).apply {
                             action = TimerService.ACTION_FAILED
                         }
                         ctx.startService(intent)
@@ -115,20 +128,14 @@ fun TimerScreen(onReturn: () -> Unit) {
                 ) {
                     Text(stringResource(R.string.btn_failed))
                 }
-
-                Button(
-                    onClick = {
-                        val intent = Intent(ctx, TimerService::class.java).apply {
-                            action = TimerService.ACTION_SUCCESS
-                        }
-                        ctx.startService(intent)
-                        onReturn()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.btn_success))
-                }
             }
+        }
+    }
+
+    // Auto-return when service stops
+    LaunchedEffect(remaining, isFinished) {
+        if (remaining == 0L && !isFinished) {
+            onReturn()
         }
     }
 }
