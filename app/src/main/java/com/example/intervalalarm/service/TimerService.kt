@@ -23,18 +23,26 @@ class TimerService : Service() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var timerJob: Job? = null
+    private var decisionJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val initialSeconds = intent.getLongExtra(EXTRA_SECONDS, 600L)
+                val initialSeconds = intent.getLongExtra(EXTRA_SECONDS, 60L)
                 val historyId = intent.getLongExtra(EXTRA_HISTORY_ID, -1L)
                 startTimer(initialSeconds, historyId)
             }
             ACTION_FAILED -> {
-                failTimer()
+                if (_isFinished.value) {
+                    finalActionFailure()
+                } else {
+                    failTimerEarly()
+                }
+            }
+            ACTION_SUCCESS -> {
+                finalActionSuccess()
             }
         }
         return START_NOT_STICKY
@@ -44,6 +52,8 @@ class TimerService : Service() {
         _remainingSeconds.value = seconds
         _initialSeconds.value = seconds
         currentHistoryId = historyId
+        _isFinished.value = false
+        _decisionTimerSeconds.value = 10
 
         startForeground(
             NOTIF_ID,
@@ -58,7 +68,57 @@ class TimerService : Service() {
                 _remainingSeconds.value -= 1
                 updateNotification(_remainingSeconds.value)
             }
-            finishTimerSuccess()
+            startDecisionPhase()
+        }
+    }
+
+    private fun startDecisionPhase() {
+        _isFinished.value = true
+        decisionJob?.cancel()
+        decisionJob = scope.launch {
+            while (_decisionTimerSeconds.value > 0) {
+                delay(1000)
+                _decisionTimerSeconds.value -= 1
+            }
+            finalActionSuccess()
+        }
+    }
+
+    private fun finalActionSuccess() {
+        decisionJob?.cancel()
+        scope.launch {
+            updateHistory("SUCCESS", _initialSeconds.value)
+            AlarmPreferences.updateTimeAlone(this@TimerService, 1.1)
+            resumeIntervals()
+            stopSelf()
+        }
+    }
+
+    private fun finalActionFailure() {
+        decisionJob?.cancel()
+        scope.launch {
+            updateHistory("FAILED", _initialSeconds.value)
+            AlarmPreferences.updateTimeAlone(this@TimerService, 0.9)
+            resumeIntervals()
+            stopSelf()
+        }
+    }
+
+    private fun failTimerEarly() {
+        timerJob?.cancel()
+        val elapsed = _initialSeconds.value - _remainingSeconds.value
+        scope.launch {
+            updateHistory("FAILED", elapsed)
+            AlarmPreferences.updateTimeAlone(this@TimerService, 0.9)
+            resumeIntervals()
+            stopSelf()
+        }
+    }
+
+    private suspend fun resumeIntervals() {
+        val cfg = AlarmPreferences.configFlow(this@TimerService).first()
+        if (cfg.isActive) {
+            AlarmScheduler.schedule(this@TimerService, cfg)
         }
     }
 
@@ -90,34 +150,6 @@ class TimerService : Service() {
             .build()
     }
 
-    private fun finishTimerSuccess() {
-        scope.launch {
-            updateHistory("SUCCESS", _initialSeconds.value)
-            AlarmPreferences.updateTimeAlone(this@TimerService, 1.1)
-            val cfg = AlarmPreferences.configFlow(this@TimerService).first()
-            if (cfg.isActive) {
-                AlarmScheduler.schedule(this@TimerService, cfg)
-            }
-            _isFinished.value = true
-            // We don't stopSelf yet to allow the UI to show the success message
-            // The UI will stop the service when the user returns
-        }
-    }
-
-    private fun failTimer() {
-        timerJob?.cancel()
-        val elapsed = _initialSeconds.value - _remainingSeconds.value
-        scope.launch {
-            updateHistory("FAILED", elapsed)
-            AlarmPreferences.updateTimeAlone(this@TimerService, 0.9)
-            val cfg = AlarmPreferences.configFlow(this@TimerService).first()
-            if (cfg.isActive) {
-                AlarmScheduler.schedule(this@TimerService, cfg)
-            }
-            stopSelf()
-        }
-    }
-
     private suspend fun updateHistory(status: String, elapsed: Long) {
         if (currentHistoryId == -1L) return
         val db = AlarmHistoryDatabase.get(this)
@@ -132,13 +164,17 @@ class TimerService : Service() {
 
     override fun onDestroy() {
         timerJob?.cancel()
+        decisionJob?.cancel()
         scope.cancel()
+        _isFinished.value = false
+        _remainingSeconds.value = 0
         super.onDestroy()
     }
 
     companion object {
         const val ACTION_START = "com.example.intervalalarm.START_TIMER"
         const val ACTION_FAILED = "com.example.intervalalarm.FAILED_TIMER"
+        const val ACTION_SUCCESS = "com.example.intervalalarm.SUCCESS_TIMER"
         const val EXTRA_SECONDS = "extra_seconds"
         const val EXTRA_HISTORY_ID = "extra_history_id"
         private const val NOTIF_ID = 9003
@@ -151,6 +187,9 @@ class TimerService : Service() {
 
         private val _isFinished = MutableStateFlow(false)
         val isFinished = _isFinished.asStateFlow()
+
+        private val _decisionTimerSeconds = MutableStateFlow(10)
+        val decisionTimerSeconds = _decisionTimerSeconds.asStateFlow()
 
         var currentHistoryId: Long = -1L
 

@@ -5,15 +5,15 @@ data class AlarmConfig(
     val startMinute: Int = 0,
     val endHour: Int = 16,
     val endMinute: Int = 30,
-    val minIntervalMin: Int = 40,
-    val maxIntervalMin: Int = 80,
+    val minIntervalMin: Int = 30,
+    val maxIntervalMin: Int = 60,
     val notificationEnabled: Boolean = true,
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val soundUri: String? = null,
     val isActive: Boolean = false,
     val repeatDays: Set<Int> = emptySet(),
-    val timeAloneSeconds: Long = 600L
+    val timeAloneSeconds: Long = 60L
 ) {
     val windowMinutes: Int
         get() {

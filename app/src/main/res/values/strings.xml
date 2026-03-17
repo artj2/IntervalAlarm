@@ -51,8 +51,9 @@
     <string name="timer_running">Timer running</string>
     <string name="timer_remaining">Remaining: %1$s</string>
     <string name="btn_failed">Failed</string>
-    <string name="msg_congrats">Congratulations 🐶</string>
-    <string name="btn_return">Return</string>
+    <string name="msg_congrats">Congratulations</string>
+    <string name="btn_success">Success!</string>
+    <string name="msg_defaulting_success">Defaulting to Success…</string>
     <string name="label_time_alone">Time Alone</string>
 
     <!-- Notification Channels -->
