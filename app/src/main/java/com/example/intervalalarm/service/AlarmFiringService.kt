@@ -42,9 +42,15 @@ class AlarmFiringService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_DISMISS) {
-            stopAlarm()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_DISMISS -> {
+                dismissAlarm()
+                return START_NOT_STICKY
+            }
+            ACTION_ACCEPT -> {
+                acceptAlarm()
+                return START_NOT_STICKY
+            }
         }
 
         startForeground(
@@ -65,8 +71,8 @@ class AlarmFiringService : Service() {
                     return@launch
                 }
 
-                AlarmHistoryDatabase.get(this@AlarmFiringService).dao()
-                    .insert(AlarmHistoryEntry())
+                currentHistoryId = AlarmHistoryDatabase.get(this@AlarmFiringService).dao()
+                    .insert(AlarmHistoryEntry(status = "FIRED", initialTimeAloneSeconds = cfg.timeAloneSeconds))
 
                 if (cfg.notificationEnabled) {
                     showAlarmNotification()
@@ -96,14 +102,24 @@ class AlarmFiringService : Service() {
     private fun showAlarmNotification() {
         val tapIntent = PendingIntent.getActivity(
             this, 0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE
+            Intent(this, MainActivity::class.java).apply {
+                putExtra("navigate_to_timer", true)
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val dismissIntent = PendingIntent.getService(
             this, 1,
             Intent(this, AlarmFiringService::class.java).apply {
                 action = ACTION_DISMISS
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val acceptIntent = PendingIntent.getService(
+            this, 2,
+            Intent(this, AlarmFiringService::class.java).apply {
+                action = ACTION_ACCEPT
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -118,6 +134,11 @@ class AlarmFiringService : Service() {
                 android.R.drawable.ic_menu_close_clear_cancel,
                 getString(R.string.btn_dismiss),
                 dismissIntent
+            )
+            .addAction(
+                android.R.drawable.ic_input_add,
+                getString(R.string.btn_accept),
+                acceptIntent
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
@@ -167,7 +188,39 @@ class AlarmFiringService : Service() {
         }
     }
 
-    private fun stopAlarm() {
+    private fun dismissAlarm() {
+        stopAlarmSoundOnly()
+        scope.launch {
+            try {
+                updateHistory("DISMISSED")
+                val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
+                if (cfg.isActive) {
+                    AlarmScheduler.schedule(this@AlarmFiringService, cfg)
+                }
+            } finally {
+                stopSelf()
+            }
+        }
+    }
+
+    private fun acceptAlarm() {
+        stopAlarmSoundOnly()
+        scope.launch {
+            try {
+                val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
+                val intent = Intent(this@AlarmFiringService, TimerService::class.java).apply {
+                    action = TimerService.ACTION_START
+                    putExtra(TimerService.EXTRA_SECONDS, cfg.timeAloneSeconds)
+                    putExtra(TimerService.EXTRA_HISTORY_ID, currentHistoryId)
+                }
+                startForegroundService(intent)
+            } finally {
+                stopSelf()
+            }
+        }
+    }
+
+    private fun stopAlarmSoundOnly() {
         mediaPlayer?.let {
             try {
                 it.setOnCompletionListener(null)
@@ -186,9 +239,12 @@ class AlarmFiringService : Service() {
 
         val nm = getSystemService(NotificationManager::class.java)
         nm.cancel(NOTIF_ID_ALARM)
+    }
 
+    private fun scheduleNextAndStop() {
         scope.launch {
             try {
+                updateHistory("DISMISSED")
                 val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
                 if (cfg.isActive) {
                     AlarmScheduler.schedule(this@AlarmFiringService, cfg)
@@ -199,17 +255,11 @@ class AlarmFiringService : Service() {
         }
     }
 
-    private fun scheduleNextAndStop() {
-        scope.launch {
-            try {
-                val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
-                if (cfg.isActive) {
-                    AlarmScheduler.schedule(this@AlarmFiringService, cfg)
-                }
-            } finally {
-                stopSelf()
-            }
-        }
+    private suspend fun updateHistory(status: String) {
+        if (currentHistoryId == -1L) return
+        val db = AlarmHistoryDatabase.get(this)
+        val entry = AlarmHistoryEntry(id = currentHistoryId, status = status)
+        db.dao().update(entry)
     }
 
     override fun onDestroy() {
@@ -231,7 +281,10 @@ class AlarmFiringService : Service() {
 
     companion object {
         const val ACTION_DISMISS = "com.example.intervalalarm.DISMISS_ALARM"
+        const val ACTION_ACCEPT = "com.example.intervalalarm.ACCEPT_ALARM"
         private const val NOTIF_ID_SERVICE = 9001
         private const val NOTIF_ID_ALARM = 9002
+
+        private var currentHistoryId: Long = -1L
     }
 }

@@ -9,6 +9,7 @@ class IntervalAlarmApp : Application() {
     companion object {
         const val CHANNEL_ALARM = "interval_alarm_channel"
         const val CHANNEL_SERVICE = "alarm_service_channel"
+        const val CHANNEL_TIMER = "timer_service_channel"
     }
 
     override fun onCreate() {
@@ -30,6 +31,17 @@ class IntervalAlarmApp : Application() {
             NotificationChannel(
                 CHANNEL_SERVICE,
                 getString(R.string.channel_service_name),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                setSound(null, null)
+                enableVibration(false)
+            }
+        )
+
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_TIMER,
+                getString(R.string.channel_timer_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 setSound(null, null)

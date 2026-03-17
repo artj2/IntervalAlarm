@@ -92,10 +92,17 @@ private fun HistoryItem(entry: AlarmHistoryEntry) {
     val fmt = remember {
         DateTimeFormatter.ofPattern("EEE, dd MMM yyyy — HH:mm:ss")
     }
-    val text = remember(entry.timestamp) {
+    val dateText = remember(entry.timestamp) {
         Instant.ofEpochMilli(entry.timestamp)
             .atZone(ZoneId.systemDefault())
             .format(fmt)
+    }
+
+    val statusDetails = when (entry.status) {
+        "DISMISSED" -> "Dismissed"
+        "SUCCESS" -> "Success — ${fmtSeconds(entry.initialTimeAloneSeconds)}"
+        "FAILED" -> "Failed — ${fmtSeconds(entry.elapsedTimeSeconds)} of ${fmtSeconds(entry.initialTimeAloneSeconds)}"
+        else -> "Fired"
     }
 
     Card(
@@ -104,10 +111,26 @@ private fun HistoryItem(entry: AlarmHistoryEntry) {
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = dateText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = statusDetails,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (entry.status == "SUCCESS") MaterialTheme.colorScheme.primary 
+                        else if (entry.status == "FAILED") MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
+}
+
+private fun fmtSeconds(totalSeconds: Long): String {
+    val h = totalSeconds / 3600
+    val m = (totalSeconds % 3600) / 60
+    val s = totalSeconds % 60
+    return if (h > 0) "%02d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
 }

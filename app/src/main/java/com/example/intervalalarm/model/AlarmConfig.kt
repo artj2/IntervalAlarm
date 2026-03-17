@@ -12,7 +12,8 @@ data class AlarmConfig(
     val vibrationEnabled: Boolean = true,
     val soundUri: String? = null,
     val isActive: Boolean = false,
-    val repeatDays: Set<Int> = emptySet()
+    val repeatDays: Set<Int> = emptySet(),
+    val timeAloneSeconds: Long = 600L
 ) {
     val windowMinutes: Int
         get() {

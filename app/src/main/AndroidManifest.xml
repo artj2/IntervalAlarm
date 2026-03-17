@@ -43,6 +43,15 @@
                 android:value="Playing alarm sound and vibration for interval alarm" />
         </service>
 
+        <service
+            android:name=".service.TimerService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Countdown timer for time alone training" />
+        </service>
+
         <receiver
             android:name=".receiver.AlarmReceiver"
             android:exported="false" />

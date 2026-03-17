@@ -23,6 +23,7 @@ object AlarmPreferences {
     private val SOUND_URI = stringPreferencesKey("sound_uri")
     private val IS_ACTIVE = booleanPreferencesKey("is_active")
     private val REPEAT_DAYS = stringPreferencesKey("repeat_days")
+    private val TIME_ALONE = longPreferencesKey("time_alone")
 
     fun configFlow(ctx: Context): Flow<AlarmConfig> =
         ctx.dataStore.data.map { p ->
@@ -42,7 +43,8 @@ object AlarmPreferences {
                     ?.split(",")
                     ?.mapNotNull { it.trim().toIntOrNull() }
                     ?.toSet()
-                    ?: emptySet()
+                    ?: emptySet(),
+                timeAloneSeconds = p[TIME_ALONE] ?: 600L
             )
         }
 
@@ -61,6 +63,15 @@ object AlarmPreferences {
             else p.remove(SOUND_URI)
             p[IS_ACTIVE] = cfg.isActive
             p[REPEAT_DAYS] = cfg.repeatDays.joinToString(",")
+            p[TIME_ALONE] = cfg.timeAloneSeconds
+        }
+    }
+
+    suspend fun updateTimeAlone(ctx: Context, multiplier: Double) {
+        ctx.dataStore.edit { p ->
+            val current = p[TIME_ALONE] ?: 600L
+            val newVal = (current * multiplier).toLong().coerceIn(1L, 14400L)
+            p[TIME_ALONE] = newVal
         }
     }
 

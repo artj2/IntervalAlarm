@@ -109,6 +109,14 @@ fun HomeScreen(vm: AlarmViewModel) {
             )
         }
 
+        // Time Alone
+        Text(stringResource(R.string.label_time_alone), style = MaterialTheme.typography.titleSmall)
+        DurationPickerCard(
+            seconds = cfg.timeAloneSeconds,
+            enabled = !cfg.isActive,
+            onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } }
+        )
+
         // Interval Range
         Text(stringResource(R.string.interval_range), style = MaterialTheme.typography.titleSmall)
         Row(
@@ -251,6 +259,83 @@ private fun ToggleRow(label: String, checked: Boolean, onToggle: (Boolean) -> Un
     ) {
         Text(label)
         Switch(checked = checked, onCheckedChange = onToggle)
+    }
+}
+
+@Composable
+private fun DurationPickerCard(
+    seconds: Long,
+    enabled: Boolean,
+    onPick: (Long) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    val s = seconds % 60
+
+    OutlinedCard(
+        onClick = { if (enabled) showDialog = true },
+        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("%02d:%02d:%02d".format(h, m, s), style = MaterialTheme.typography.headlineMedium)
+        }
+    }
+
+    if (showDialog) {
+        var localH by remember { mutableStateOf(h.toString()) }
+        var localM by remember { mutableStateOf(m.toString()) }
+        var localS by remember { mutableStateOf(s.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newH = localH.toLongOrNull() ?: 0L
+                    val newM = localM.toLongOrNull() ?: 0L
+                    val newS = localS.toLongOrNull() ?: 0L
+                    val total = (newH * 3600 + newM * 60 + newS).coerceIn(1L, 14400L)
+                    onPick(total)
+                    showDialog = false
+                }) { Text(stringResource(R.string.dialog_ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.dialog_cancel)) }
+            },
+            title = { Text(stringResource(R.string.label_time_alone)) },
+            text = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = localH,
+                        onValueChange = { if (it.length <= 2) localH = it },
+                        label = { Text("H") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = localM,
+                        onValueChange = { if (it.length <= 2) localM = it },
+                        label = { Text("M") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = localS,
+                        onValueChange = { if (it.length <= 2) localS = it },
+                        label = { Text("S") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+            }
+        )
     }
 }
 
