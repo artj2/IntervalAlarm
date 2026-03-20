@@ -6,61 +6,68 @@
 
     <group
         android:translateX="0"
-        android:translateY="4">
-
-        <!-- Simple Outline of the Dog -->
-        <path
-            android:strokeColor="#FFFFFF"
-            android:strokeWidth="2.5"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"
-            android:pathData="M38,35
-                              L70,35
-                              C75,35 78,45 74,65
-                              L65,88
-                              L43,88
-                              L34,65
-                              C30,45 33,35 38,35
-                              Z" />
-
-        <!-- Simple Outline of the Ears -->
-        <!-- Left Ear -->
-        <path
-            android:strokeColor="#FFFFFF"
-            android:strokeWidth="2.5"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"
-            android:pathData="M38,38 L25,30 L45,25" />
-        <!-- Right Ear -->
-        <path
-            android:strokeColor="#FFFFFF"
-            android:strokeWidth="2.5"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"
-            android:pathData="M70,38 L83,30 L63,25" />
-
-        <!-- Snout Patch Outline -->
-        <path
-            android:strokeColor="#FFFFFF"
-            android:strokeWidth="1.5"
-            android:strokeLineCap="round"
-            android:pathData="M50,55 L58,55 L60,82 L48,82 Z" />
-
-        <!-- Simple Eyes -->
+        android:translateY="0">
+        
+        <!-- Timer Knob / Button -->
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M44,50 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
+            android:pathData="M50,22h8v4h-8z" />
+
+        <!-- Dog Ears (Floppy) -->
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M60,50 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
-
-        <!-- Harness/Collar Line -->
+            android:pathData="M28,35c-2,0 -6,2 -6,8v12c0,6 4,8 8,8h4v-28z" />
         <path
-            android:strokeColor="#FFFFFF"
+            android:fillColor="#FFFFFF"
+            android:pathData="M80,35c2,0 6,2 6,8v12c0,6 -4,8 -8,8h-4v-28z" />
+
+        <!-- Face / Timer Case -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,30c-16,0 -28,12 -28,28s12,28 28,28s28,-12 28,-28s-12,-28 -28,-28z" />
+
+        <!-- Interior Features (Colors match background #89C4F4) -->
+        
+        <!-- Eyes -->
+        <path
+            android:fillColor="#89C4F4"
+            android:pathData="M42,54a3,3 0,1 1,-6 0a3,3 0,1 1,6 0" />
+        <path
+            android:fillColor="#89C4F4"
+            android:pathData="M72,54a3,3 0,1 1,-6 0a3,3 0,1 1,6 0" />
+
+        <!-- Nose -->
+        <path
+            android:fillColor="#89C4F4"
+            android:pathData="M51,62h6l-3,4z" />
+
+        <!-- Smile -->
+        <path
+            android:strokeColor="#89C4F4"
             android:strokeWidth="2"
             android:strokeLineCap="round"
-            android:pathData="M35,92 C40,100 68,100 73,92" />
+            android:pathData="M46,70c2,3 6,3 8,0c2,3 6,3 8,0" />
+
+        <!-- Timer Needle -->
+        <path
+            android:strokeColor="#89C4F4"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:pathData="M54,58 L66,42" />
+            
+        <!-- Tick marks around the timer edge -->
+        <path
+            android:fillColor="#89C4F4"
+            android:pathData="M53,34h2v4h-2z" /> <!-- 12 o'clock -->
+        <path
+            android:fillColor="#89C4F4"
+            android:pathData="M78,57v2h-4v-2z" /> <!-- 3 o'clock -->
+        <path
+            android:fillColor="#89C4F4"
+            android:pathData="M53,82h2v-4h-2z" /> <!-- 6 o'clock -->
+        <path
+            android:fillColor="#89C4F4"
+            android:pathData="M34,57v2h4v-2z" /> <!-- 9 o'clock -->
 
     </group>
-
 </vector>
