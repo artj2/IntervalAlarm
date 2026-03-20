@@ -14,13 +14,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.example.intervalalarm.R
 import com.example.intervalalarm.ui.AlarmViewModel
+import com.example.intervalalarm.service.AlarmFiringService
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
@@ -29,7 +30,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(vm: AlarmViewModel) {
     val cfg by vm.config.collectAsState()
-    val isFiring by com.example.intervalalarm.service.AlarmFiringService.isFiring.collectAsState()
+    val isFiring by AlarmFiringService.isFiring.collectAsState()
     val scroll = rememberScrollState()
     val ctx = LocalContext.current
 
@@ -44,8 +45,8 @@ fun HomeScreen(vm: AlarmViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scroll)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Firing Status Card
         if (isFiring) {
@@ -54,47 +55,45 @@ fun HomeScreen(vm: AlarmViewModel) {
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.onErrorContainer
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         stringResource(R.string.notif_alarm_title),
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Text(
-                        stringResource(R.string.notif_alarm_text),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.titleMedium
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
                             onClick = {
-                                val intent = Intent(ctx, com.example.intervalalarm.service.AlarmFiringService::class.java).apply {
-                                    action = com.example.intervalalarm.service.AlarmFiringService.ACTION_ACCEPT
+                                val intent = Intent(ctx, AlarmFiringService::class.java).apply {
+                                    action = AlarmFiringService.ACTION_ACCEPT
                                 }
                                 ctx.startForegroundService(intent)
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(0.dp)
                         ) {
                             Text(stringResource(R.string.btn_accept))
                         }
                         OutlinedButton(
                             onClick = {
-                                val intent = Intent(ctx, com.example.intervalalarm.service.AlarmFiringService::class.java).apply {
-                                    action = com.example.intervalalarm.service.AlarmFiringService.ACTION_DISMISS
+                                val intent = Intent(ctx, AlarmFiringService::class.java).apply {
+                                    action = AlarmFiringService.ACTION_DISMISS
                                 }
                                 ctx.startForegroundService(intent)
                             },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            contentPadding = PaddingValues(0.dp)
                         ) {
                             Text(stringResource(R.string.btn_dismiss))
                         }
@@ -114,14 +113,14 @@ fun HomeScreen(vm: AlarmViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Text(
                         if (cfg.isActive) stringResource(R.string.status_active) else stringResource(R.string.status_inactive),
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleSmall
                     )
                     if (cfg.isActive) {
                         Text(
@@ -135,7 +134,9 @@ fun HomeScreen(vm: AlarmViewModel) {
                     colors = if (cfg.isActive) ButtonDefaults.filledTonalButtonColors(
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError
-                    ) else ButtonDefaults.filledTonalButtonColors()
+                    ) else ButtonDefaults.filledTonalButtonColors(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    modifier = Modifier.height(32.dp)
                 ) {
                     Text(if (cfg.isActive) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start))
                 }
@@ -143,9 +144,8 @@ fun HomeScreen(vm: AlarmViewModel) {
         }
 
         // Time Window
-        Text(stringResource(R.string.time_window), style = MaterialTheme.typography.titleSmall)
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             TimePickerCard(
@@ -169,40 +169,33 @@ fun HomeScreen(vm: AlarmViewModel) {
         // Time Alone & Adjustment
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Bottom
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1.5f)) {
-                Text(stringResource(R.string.label_time_alone), style = MaterialTheme.typography.titleSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                DurationPickerCard(
-                    seconds = cfg.timeAloneSeconds,
-                    enabled = !cfg.isActive,
-                    onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } }
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.label_adjustment), style = MaterialTheme.typography.titleSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                IntervalField(
-                    label = "%",
-                    configValue = cfg.adjustmentPercent,
-                    enabled = !cfg.isActive,
-                    onCommit = { v ->
-                        vm.updateConfig { copy(adjustmentPercent = v.coerceIn(1, 100)) }
-                    }
-                )
-            }
+            DurationPickerCard(
+                seconds = cfg.timeAloneSeconds,
+                enabled = !cfg.isActive,
+                onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } },
+                modifier = Modifier.weight(1.5f)
+            )
+            IntervalField(
+                label = "Adj %",
+                configValue = cfg.adjustmentPercent,
+                enabled = !cfg.isActive,
+                onCommit = { v ->
+                    vm.updateConfig { copy(adjustmentPercent = v.coerceIn(1, 100)) }
+                },
+                modifier = Modifier.weight(1f)
+            )
         }
 
         // Interval Range
-        Text(stringResource(R.string.interval_range), style = MaterialTheme.typography.titleSmall)
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             IntervalField(
-                label = stringResource(R.string.label_min),
+                label = "Min Int",
                 configValue = cfg.minIntervalMin,
                 enabled = !cfg.isActive,
                 onCommit = { v ->
@@ -211,7 +204,7 @@ fun HomeScreen(vm: AlarmViewModel) {
                 modifier = Modifier.weight(1f)
             )
             IntervalField(
-                label = stringResource(R.string.label_max),
+                label = "Max Int",
                 configValue = cfg.maxIntervalMin,
                 enabled = !cfg.isActive,
                 onCommit = { v ->
@@ -222,9 +215,8 @@ fun HomeScreen(vm: AlarmViewModel) {
         }
 
         // Alert Toggles
-        Text(stringResource(R.string.section_alerts), style = MaterialTheme.typography.titleSmall)
         Card {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
                 ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled) {
                     vm.updateConfig { copy(soundEnabled = it) }
                 }
@@ -243,30 +235,30 @@ fun HomeScreen(vm: AlarmViewModel) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, bottom = 8.dp),
+                            .padding(start = 8.dp, bottom = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(soundName, style = MaterialTheme.typography.bodySmall)
-                        TextButton(onClick = {
-                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                                if (currentUri != null) {
-                                    putExtra(
-                                        RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
-                                        currentUri.toUri()
-                                    )
+                        Text(soundName, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                        TextButton(
+                            onClick = {
+                                val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                    if (currentUri != null) {
+                                        putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, currentUri.toUri())
+                                    }
                                 }
-                            }
-                            ringtoneLauncher.launch(intent)
-                        }) {
-                            Text(stringResource(R.string.btn_change))
+                                ringtoneLauncher.launch(intent)
+                            },
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier.height(24.dp)
+                        ) {
+                            Text(stringResource(R.string.btn_change), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
-                HorizontalDivider()
                 ToggleRow(stringResource(R.string.alert_vibration), cfg.vibrationEnabled) {
                     vm.updateConfig { copy(vibrationEnabled = it) }
                 }
@@ -274,14 +266,8 @@ fun HomeScreen(vm: AlarmViewModel) {
         }
 
         // Repeat Days
-        Text(stringResource(R.string.section_repeat), style = MaterialTheme.typography.titleSmall)
-        Text(
-            stringResource(R.string.repeat_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             for (dow in DayOfWeek.entries) {
@@ -302,7 +288,8 @@ fun HomeScreen(vm: AlarmViewModel) {
                             style = MaterialTheme.typography.labelSmall
                         )
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.extraSmall
                 )
             }
         }
@@ -315,8 +302,6 @@ fun HomeScreen(vm: AlarmViewModel) {
                 style = MaterialTheme.typography.bodySmall
             )
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -326,13 +311,16 @@ fun HomeScreen(vm: AlarmViewModel) {
 private fun ToggleRow(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label)
-        Switch(checked = checked, onCheckedChange = onToggle)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Switch(
+            checked = checked, 
+            onCheckedChange = onToggle,
+            modifier = Modifier.scale(0.7f)
+        )
     }
 }
 
@@ -340,7 +328,8 @@ private fun ToggleRow(label: String, checked: Boolean, onToggle: (Boolean) -> Un
 private fun DurationPickerCard(
     seconds: Long,
     enabled: Boolean,
-    onPick: (Long) -> Unit
+    onPick: (Long) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
     val h = seconds / 3600
@@ -349,14 +338,14 @@ private fun DurationPickerCard(
 
     OutlinedCard(
         onClick = { if (enabled) showDialog = true },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         enabled = enabled
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("%02d:%02d:%02d".format(h, m, s), style = MaterialTheme.typography.headlineMedium)
+            Text("%02d:%02d:%02d".format(h, m, s), style = MaterialTheme.typography.titleLarge)
         }
     }
 
@@ -432,13 +421,13 @@ private fun TimePickerCard(
         enabled = enabled
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(label, style = MaterialTheme.typography.labelSmall)
             Text(
                 fmtTime(hour, minute),
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.titleLarge
             )
         }
     }
@@ -481,9 +470,10 @@ private fun IntervalField(
                 }
             }
         },
-        label = { Text(label) },
+        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         enabled = enabled,
         singleLine = true,
+        textStyle = MaterialTheme.typography.bodyMedium,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier
     )
