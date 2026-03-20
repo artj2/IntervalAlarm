@@ -77,9 +77,7 @@ class AlarmFiringService : Service() {
                 currentHistoryId = AlarmHistoryDatabase.get(this@AlarmFiringService).dao()
                     .insert(AlarmHistoryEntry(status = "FIRED", initialTimeAloneSeconds = cfg.timeAloneSeconds))
 
-                if (cfg.notificationEnabled) {
-                    showAlarmNotification()
-                }
+                showAlarmNotification()
 
                 if (cfg.vibrationEnabled) {
                     startVibration()
@@ -89,8 +87,9 @@ class AlarmFiringService : Service() {
                     startSound(cfg.soundUri)
                 }
 
-                if (!cfg.notificationEnabled && !cfg.soundEnabled && !cfg.vibrationEnabled) {
-                    scheduleNextAndStop()
+                if (!cfg.soundEnabled && !cfg.vibrationEnabled) {
+                    // Even if silent/no-vibe, we still showed notification, 
+                    // so we don't automatically stop anymore.
                 }
 
             } catch (e: Exception) {

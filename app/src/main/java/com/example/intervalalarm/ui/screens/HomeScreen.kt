@@ -225,10 +225,6 @@ fun HomeScreen(vm: AlarmViewModel) {
         Text(stringResource(R.string.section_alerts), style = MaterialTheme.typography.titleSmall)
         Card {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                ToggleRow(stringResource(R.string.alert_notif), cfg.notificationEnabled) {
-                    vm.updateConfig { copy(notificationEnabled = it) }
-                }
-                HorizontalDivider()
                 ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled) {
                     vm.updateConfig { copy(soundEnabled = it) }
                 }

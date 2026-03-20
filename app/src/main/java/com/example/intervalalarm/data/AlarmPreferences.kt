@@ -17,7 +17,6 @@ object AlarmPreferences {
     private val END_MIN = intPreferencesKey("end_min")
     private val MIN_INTERVAL = intPreferencesKey("min_interval")
     private val MAX_INTERVAL = intPreferencesKey("max_interval")
-    private val NOTIF_ON = booleanPreferencesKey("notif_on")
     private val SOUND_ON = booleanPreferencesKey("sound_on")
     private val VIB_ON = booleanPreferencesKey("vib_on")
     private val SOUND_URI = stringPreferencesKey("sound_uri")
@@ -35,7 +34,6 @@ object AlarmPreferences {
                 endMinute = p[END_MIN] ?: 30,
                 minIntervalMin = p[MIN_INTERVAL] ?: 40,
                 maxIntervalMin = p[MAX_INTERVAL] ?: 80,
-                notificationEnabled = p[NOTIF_ON] ?: true,
                 soundEnabled = p[SOUND_ON] ?: true,
                 vibrationEnabled = p[VIB_ON] ?: true,
                 soundUri = p[SOUND_URI],
@@ -58,7 +56,6 @@ object AlarmPreferences {
             p[END_MIN] = cfg.endMinute
             p[MIN_INTERVAL] = cfg.minIntervalMin
             p[MAX_INTERVAL] = cfg.maxIntervalMin
-            p[NOTIF_ON] = cfg.notificationEnabled
             p[SOUND_ON] = cfg.soundEnabled
             p[VIB_ON] = cfg.vibrationEnabled
             if (cfg.soundUri != null) p[SOUND_URI] = cfg.soundUri

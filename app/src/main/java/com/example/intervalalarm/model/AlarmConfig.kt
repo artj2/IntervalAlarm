@@ -7,7 +7,6 @@ data class AlarmConfig(
     val endMinute: Int = 30,
     val minIntervalMin: Int = 30,
     val maxIntervalMin: Int = 60,
-    val notificationEnabled: Boolean = true,
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val soundUri: String? = null,
