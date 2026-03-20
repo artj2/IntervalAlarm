@@ -3,9 +3,11 @@ package com.example.intervalalarm.service
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.example.intervalalarm.IntervalAlarmApp
 import com.example.intervalalarm.MainActivity
@@ -24,6 +26,7 @@ class TimerService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var timerJob: Job? = null
     private var decisionJob: Job? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -32,6 +35,7 @@ class TimerService : Service() {
             ACTION_START -> {
                 val initialSeconds = intent.getLongExtra(EXTRA_SECONDS, 60L)
                 val historyId = intent.getLongExtra(EXTRA_HISTORY_ID, -1L)
+                acquireWakeLock()
                 startTimer(initialSeconds, historyId)
             }
             ACTION_FAILED -> {
@@ -46,6 +50,20 @@ class TimerService : Service() {
             }
         }
         return START_NOT_STICKY
+    }
+
+    private fun acquireWakeLock() {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "IntervalAlarm:TimerWakeLock").apply {
+            acquire(3600_000L) // 1 hour max
+        }
+    }
+
+    private fun releaseWakeLock() {
+        if (wakeLock?.isHeld == true) {
+            wakeLock?.release()
+        }
+        wakeLock = null
     }
 
     private fun startTimer(seconds: Long, historyId: Long) {
@@ -86,6 +104,7 @@ class TimerService : Service() {
 
     private fun finalActionSuccess() {
         decisionJob?.cancel()
+        releaseWakeLock()
         scope.launch {
             updateHistory("SUCCESS", _initialSeconds.value)
             AlarmPreferences.updateTimeAlone(this@TimerService, 1.1)
@@ -96,6 +115,7 @@ class TimerService : Service() {
 
     private fun finalActionFailure() {
         decisionJob?.cancel()
+        releaseWakeLock()
         scope.launch {
             updateHistory("FAILED", _initialSeconds.value)
             AlarmPreferences.updateTimeAlone(this@TimerService, 0.9)
@@ -106,6 +126,7 @@ class TimerService : Service() {
 
     private fun failTimerEarly() {
         timerJob?.cancel()
+        releaseWakeLock()
         val elapsed = _initialSeconds.value - _remainingSeconds.value
         scope.launch {
             updateHistory("FAILED", elapsed)
@@ -165,6 +186,7 @@ class TimerService : Service() {
     override fun onDestroy() {
         timerJob?.cancel()
         decisionJob?.cancel()
+        releaseWakeLock()
         scope.cancel()
         _isFinished.value = false
         _remainingSeconds.value = 0
