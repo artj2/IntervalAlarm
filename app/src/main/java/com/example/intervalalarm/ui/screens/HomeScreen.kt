@@ -41,281 +41,175 @@ fun HomeScreen(vm: AlarmViewModel) {
         vm.updateConfig { copy(soundUri = uri?.toString()) }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scroll)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Firing Status Card
-        if (isFiring) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                modifier = Modifier.padding(bottom = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenHeight = maxHeight
+        val scaleFactor = (screenHeight / 700.dp).coerceIn(0.8f, 1.5f)
+        val labelStyle = MaterialTheme.typography.labelMedium.copy(fontSize = (MaterialTheme.typography.labelMedium.fontSize * scaleFactor))
+        val bodyStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = (MaterialTheme.typography.bodyMedium.fontSize * scaleFactor))
+        val titleStyle = MaterialTheme.typography.titleMedium.copy(fontSize = (MaterialTheme.typography.titleMedium.fontSize * scaleFactor))
+        val largeStyle = MaterialTheme.typography.headlineMedium.copy(fontSize = (MaterialTheme.typography.headlineMedium.fontSize * scaleFactor))
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scroll)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Firing Status Card
+            if (isFiring) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        stringResource(R.string.notif_alarm_title),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                val intent = Intent(ctx, AlarmFiringService::class.java).apply {
-                                    action = AlarmFiringService.ACTION_ACCEPT
-                                }
-                                ctx.startForegroundService(intent)
-                            },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(stringResource(R.string.btn_accept))
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                val intent = Intent(ctx, AlarmFiringService::class.java).apply {
-                                    action = AlarmFiringService.ACTION_DISMISS
-                                }
-                                ctx.startForegroundService(intent)
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(stringResource(R.string.btn_dismiss))
+                        Text(stringResource(R.string.notif_alarm_title), style = titleStyle)
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = {
+                                    val intent = Intent(ctx, AlarmFiringService::class.java).apply { action = AlarmFiringService.ACTION_ACCEPT }
+                                    ctx.startForegroundService(intent)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text(stringResource(R.string.btn_accept), fontSize = bodyStyle.fontSize) }
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(ctx, AlarmFiringService::class.java).apply { action = AlarmFiringService.ACTION_DISMISS }
+                                    ctx.startForegroundService(intent)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text(stringResource(R.string.btn_dismiss), fontSize = bodyStyle.fontSize) }
                         }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Status Card
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = if (cfg.isActive)
-                    MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant
-            ),
-            modifier = Modifier.weight(1f, fill = false)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        if (cfg.isActive) stringResource(R.string.status_active) else stringResource(R.string.status_inactive),
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    if (cfg.isActive) {
-                        Text(
-                            stringResource(R.string.running_range, fmtTime(cfg.startHour, cfg.startMinute), fmtTime(cfg.endHour, cfg.endMinute)),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-                FilledTonalButton(
-                    onClick = { vm.toggleActive() },
-                    colors = if (cfg.isActive) ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ) else ButtonDefaults.filledTonalButtonColors(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                    modifier = Modifier.height(32.dp)
+            // Status Section
+            Column(modifier = Modifier.weight(1.2f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (cfg.isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f)
                 ) {
-                    Text(if (cfg.isActive) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
-
-        // Time Window
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
-        ) {
-            TimePickerCard(
-                label = stringResource(R.string.label_start),
-                hour = cfg.startHour,
-                minute = cfg.startMinute,
-                enabled = !cfg.isActive,
-                onPick = { h, m -> vm.updateConfig { copy(startHour = h, startMinute = m) } },
-                modifier = Modifier.weight(1f)
-            )
-            TimePickerCard(
-                label = stringResource(R.string.label_end),
-                hour = cfg.endHour,
-                minute = cfg.endMinute,
-                enabled = !cfg.isActive,
-                onPick = { h, m -> vm.updateConfig { copy(endHour = h, endMinute = m) } },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
-
-        // Time Alone & Adjustment
-        Row(
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            DurationPickerCard(
-                seconds = cfg.timeAloneSeconds,
-                enabled = !cfg.isActive,
-                onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } },
-                modifier = Modifier.weight(1.5f)
-            )
-            IntervalField(
-                label = "Adj %",
-                configValue = cfg.adjustmentPercent,
-                enabled = !cfg.isActive,
-                onCommit = { v ->
-                    vm.updateConfig { copy(adjustmentPercent = v.coerceIn(1, 100)) }
-                },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
-
-        // Interval Range
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
-        ) {
-            IntervalField(
-                label = "Min Int",
-                configValue = cfg.minIntervalMin,
-                enabled = !cfg.isActive,
-                onCommit = { v ->
-                    vm.updateConfig { copy(minIntervalMin = v.coerceIn(1, cfg.maxIntervalMin)) }
-                },
-                modifier = Modifier.weight(1f)
-            )
-            IntervalField(
-                label = "Max Int",
-                configValue = cfg.maxIntervalMin,
-                enabled = !cfg.isActive,
-                onCommit = { v ->
-                    vm.updateConfig { copy(maxIntervalMin = v.coerceAtLeast(cfg.minIntervalMin)) }
-                },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
-
-        // Alert Toggles
-        Card(modifier = Modifier.weight(1f, fill = false)) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
-                ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled) {
-                    vm.updateConfig { copy(soundEnabled = it) }
-                }
-                if (cfg.soundEnabled) {
-                    val currentUri = cfg.soundUri
-                    val customStr = stringResource(R.string.sound_custom)
-                    val defaultStr = stringResource(R.string.sound_default)
-                    val soundName = remember(currentUri) {
-                        if (currentUri != null) {
-                            try {
-                                val r = RingtoneManager.getRingtone(ctx, currentUri.toUri())
-                                r?.getTitle(ctx) ?: customStr
-                            } catch (_: Exception) { customStr }
-                        } else defaultStr
-                    }
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 8.dp, bottom = 2.dp),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(soundName, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                        TextButton(
-                            onClick = {
-                                val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                                    putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                                    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                                    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                                    if (currentUri != null) {
-                                        putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, currentUri.toUri())
-                                    }
-                                }
-                                ringtoneLauncher.launch(intent)
-                            },
-                            contentPadding = PaddingValues(0.dp),
-                            modifier = Modifier.height(24.dp)
-                        ) {
-                            Text(stringResource(R.string.btn_change), style = MaterialTheme.typography.labelSmall)
+                        Column {
+                            Text(if (cfg.isActive) stringResource(R.string.status_active) else stringResource(R.string.status_inactive), style = titleStyle)
+                            if (cfg.isActive) {
+                                Text(stringResource(R.string.running_range, fmtTime(cfg.startHour, cfg.startMinute), fmtTime(cfg.endHour, cfg.endMinute)), style = bodyStyle)
+                            }
                         }
+                        FilledTonalButton(
+                            onClick = { vm.toggleActive() },
+                            modifier = Modifier.height(48.dp * scaleFactor)
+                        ) { Text(if (cfg.isActive) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start), fontSize = bodyStyle.fontSize) }
                     }
                 }
-                ToggleRow(stringResource(R.string.alert_vibration), cfg.vibrationEnabled) {
-                    vm.updateConfig { copy(vibrationEnabled = it) }
+            }
+
+            // Time Window Section
+            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+                Text(stringResource(R.string.time_window), style = labelStyle)
+                Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TimePickerCard(
+                        label = stringResource(R.string.label_start),
+                        hour = cfg.startHour, minute = cfg.startMinute,
+                        enabled = !cfg.isActive, textStyle = largeStyle, labelStyle = labelStyle,
+                        onPick = { h, m -> vm.updateConfig { copy(startHour = h, startMinute = m) } },
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                    TimePickerCard(
+                        label = stringResource(R.string.label_end),
+                        hour = cfg.endHour, minute = cfg.endMinute,
+                        enabled = !cfg.isActive, textStyle = largeStyle, labelStyle = labelStyle,
+                        onPick = { h, m -> vm.updateConfig { copy(endHour = h, endMinute = m) } },
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
-
-        // Repeat Days
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
-        ) {
-            for (dow in DayOfWeek.entries) {
-                val selected = cfg.repeatDays.contains(dow.value)
-                FilterChip(
-                    selected = selected,
-                    enabled = !cfg.isActive,
-                    onClick = {
-                        val newDays = if (selected)
-                            cfg.repeatDays - dow.value
-                        else
-                            cfg.repeatDays + dow.value
-                        vm.updateConfig { copy(repeatDays = newDays) }
-                    },
-                    label = {
-                        Text(
-                            dow.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.extraSmall
-                )
+            // Time Alone Section
+            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.label_time_alone), style = labelStyle, modifier = Modifier.weight(1.5f))
+                    Text(stringResource(R.string.label_adjustment), style = labelStyle, modifier = Modifier.weight(1f))
+                }
+                Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    DurationPickerCard(
+                        seconds = cfg.timeAloneSeconds, enabled = !cfg.isActive, textStyle = largeStyle,
+                        onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } },
+                        modifier = Modifier.weight(1.5f).fillMaxHeight()
+                    )
+                    IntervalField(
+                        label = "%", configValue = cfg.adjustmentPercent, enabled = !cfg.isActive, textStyle = bodyStyle, labelStyle = labelStyle,
+                        onCommit = { v -> vm.updateConfig { copy(adjustmentPercent = v.coerceIn(1, 100)) } },
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                }
             }
-        }
 
-        // Validation hint
-        if (cfg.windowMinutes < cfg.minIntervalMin) {
-            Text(
-                stringResource(R.string.warning_window_too_small),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
+            // Interval Range Section
+            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+                Text(stringResource(R.string.interval_range), style = labelStyle)
+                Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IntervalField(
+                        label = "Min Int", configValue = cfg.minIntervalMin, enabled = !cfg.isActive, textStyle = bodyStyle, labelStyle = labelStyle,
+                        onCommit = { v -> vm.updateConfig { copy(minIntervalMin = v.coerceIn(1, cfg.maxIntervalMin)) } },
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                    IntervalField(
+                        label = "Max Int", configValue = cfg.maxIntervalMin, enabled = !cfg.isActive, textStyle = bodyStyle, labelStyle = labelStyle,
+                        onCommit = { v -> vm.updateConfig { copy(maxIntervalMin = v.coerceAtLeast(cfg.minIntervalMin)) } },
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                }
+            }
+
+            // Alerts Section
+            Column(modifier = Modifier.weight(1.2f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+                Text(stringResource(R.string.section_alerts), style = labelStyle)
+                Card(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+                    Column(modifier = Modifier.padding(horizontal = 12.dp).fillMaxSize(), verticalArrangement = Arrangement.Center) {
+                        ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(soundEnabled = it) } }
+                        ToggleRow(stringResource(R.string.alert_vibration), cfg.vibrationEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(vibrationEnabled = it) } }
+                    }
+                }
+            }
+
+            // Repeat Days Section
+            Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+                Text(stringResource(R.string.section_repeat), style = labelStyle)
+                Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    for (dow in DayOfWeek.entries) {
+                        val selected = cfg.repeatDays.contains(dow.value)
+                        FilterChip(
+                            selected = selected, enabled = !cfg.isActive,
+                            onClick = {
+                                val newDays = if (selected) cfg.repeatDays - dow.value else cfg.repeatDays + dow.value
+                                vm.updateConfig { copy(repeatDays = newDays) }
+                            },
+                            label = { Text(dow.getDisplayName(TextStyle.NARROW, Locale.getDefault()), fontSize = labelStyle.fontSize) },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            shape = MaterialTheme.shapes.extraSmall
+                        )
+                    }
+                }
+            }
+
+            if (cfg.windowMinutes < cfg.minIntervalMin) {
+                Text(stringResource(R.string.warning_window_too_small), color = MaterialTheme.colorScheme.error, style = bodyStyle)
+            }
         }
     }
 }
@@ -323,47 +217,29 @@ fun HomeScreen(vm: AlarmViewModel) {
 // ── Helpers ──────────────────────────────────────────────
 
 @Composable
-private fun ToggleRow(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Switch(
-            checked = checked, 
-            onCheckedChange = onToggle,
-            modifier = Modifier.scale(0.7f)
-        )
+private fun ToggleRow(label: String, checked: Boolean, textStyle: androidx.compose.ui.text.TextStyle, scale: Float, onToggle: (Boolean) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = textStyle)
+        Switch(checked = checked, onCheckedChange = onToggle, modifier = Modifier.scale(0.7f * scale))
     }
 }
 
 @Composable
 private fun DurationPickerCard(
-    seconds: Long,
-    enabled: Boolean,
-    onPick: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    seconds: Long, enabled: Boolean, textStyle: androidx.compose.ui.text.TextStyle,
+    onPick: (Long) -> Unit, modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
     val h = seconds / 3600
     val m = (seconds % 3600) / 60
     val s = seconds % 60
 
-    OutlinedCard(
-        onClick = { if (enabled) showDialog = true },
-        modifier = modifier,
-        enabled = enabled
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("%02d:%02d:%02d".format(h, m, s), style = MaterialTheme.typography.titleLarge)
+    OutlinedCard(onClick = { if (enabled) showDialog = true }, modifier = modifier, enabled = enabled) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("%02d:%02d:%02d".format(h, m, s), style = textStyle)
         }
     }
-
+    // ... Dialog logic remains the same ...
     if (showDialog) {
         var localH by remember { mutableStateOf(h.toString()) }
         var localM by remember { mutableStateOf(m.toString()) }
@@ -420,33 +296,20 @@ private fun DurationPickerCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimePickerCard(
-    label: String,
-    hour: Int,
-    minute: Int,
-    enabled: Boolean,
-    onPick: (Int, Int) -> Unit,
-    modifier: Modifier = Modifier
+    label: String, hour: Int, minute: Int, enabled: Boolean,
+    textStyle: androidx.compose.ui.text.TextStyle, labelStyle: androidx.compose.ui.text.TextStyle,
+    onPick: (Int, Int) -> Unit, modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
     val tpState = rememberTimePickerState(initialHour = hour, initialMinute = minute)
 
-    OutlinedCard(
-        onClick = { if (enabled) showDialog = true },
-        modifier = modifier,
-        enabled = enabled
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(label, style = MaterialTheme.typography.labelSmall)
-            Text(
-                fmtTime(hour, minute),
-                style = MaterialTheme.typography.titleLarge
-            )
+    OutlinedCard(onClick = { if (enabled) showDialog = true }, modifier = modifier, enabled = enabled) {
+        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(label, style = labelStyle)
+            Text(fmtTime(hour, minute), style = textStyle)
         }
     }
-
+    // ... Dialog logic remains the same ...
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -466,11 +329,9 @@ private fun TimePickerCard(
 
 @Composable
 private fun IntervalField(
-    label: String,
-    configValue: Int,
-    enabled: Boolean,
-    onCommit: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    label: String, configValue: Int, enabled: Boolean,
+    textStyle: androidx.compose.ui.text.TextStyle, labelStyle: androidx.compose.ui.text.TextStyle,
+    onCommit: (Int) -> Unit, modifier: Modifier = Modifier
 ) {
     var text by remember(configValue) { mutableStateOf(configValue.toString()) }
 
@@ -480,15 +341,11 @@ private fun IntervalField(
             if (newText.isEmpty() || newText.all { it.isDigit() }) {
                 text = newText
                 val parsed = newText.toIntOrNull()
-                if (parsed != null && parsed > 0) {
-                    onCommit(parsed)
-                }
+                if (parsed != null && parsed > 0) onCommit(parsed)
             }
         },
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-        enabled = enabled,
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium,
+        label = { Text(label, style = labelStyle) },
+        enabled = enabled, singleLine = true, textStyle = textStyle,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier
     )
