@@ -109,13 +109,34 @@ fun HomeScreen(vm: AlarmViewModel) {
             )
         }
 
-        // Time Alone
-        Text(stringResource(R.string.label_time_alone), style = MaterialTheme.typography.titleSmall)
-        DurationPickerCard(
-            seconds = cfg.timeAloneSeconds,
-            enabled = !cfg.isActive,
-            onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } }
-        )
+        // Time Alone & Adjustment
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Column(modifier = Modifier.weight(1.5f)) {
+                Text(stringResource(R.string.label_time_alone), style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                DurationPickerCard(
+                    seconds = cfg.timeAloneSeconds,
+                    enabled = !cfg.isActive,
+                    onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } }
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.label_adjustment), style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                IntervalField(
+                    label = "%",
+                    configValue = cfg.adjustmentPercent,
+                    enabled = !cfg.isActive,
+                    onCommit = { v ->
+                        vm.updateConfig { copy(adjustmentPercent = v.coerceIn(1, 100)) }
+                    }
+                )
+            }
+        }
 
         // Interval Range
         Text(stringResource(R.string.interval_range), style = MaterialTheme.typography.titleSmall)

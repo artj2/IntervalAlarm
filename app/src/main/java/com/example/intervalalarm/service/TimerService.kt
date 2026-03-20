@@ -131,7 +131,7 @@ class TimerService : Service() {
         releaseWakeLock()
         scope.launch {
             updateHistory("SUCCESS", _initialSeconds.value)
-            AlarmPreferences.updateTimeAlone(this@TimerService, 1.1)
+            AlarmPreferences.updateTimeAlone(this@TimerService, true)
             resumeIntervals()
             showCompletionNotification(true)
             stopSelf()
@@ -143,7 +143,7 @@ class TimerService : Service() {
         releaseWakeLock()
         scope.launch {
             updateHistory("FAILED", _initialSeconds.value)
-            AlarmPreferences.updateTimeAlone(this@TimerService, 0.9)
+            AlarmPreferences.updateTimeAlone(this@TimerService, false)
             resumeIntervals()
             showCompletionNotification(false)
             stopSelf()
@@ -156,7 +156,7 @@ class TimerService : Service() {
         val elapsed = _initialSeconds.value - _remainingSeconds.value
         scope.launch {
             updateHistory("FAILED", elapsed)
-            AlarmPreferences.updateTimeAlone(this@TimerService, 0.9)
+            AlarmPreferences.updateTimeAlone(this@TimerService, false)
             resumeIntervals()
             stopSelf()
         }

@@ -55,6 +55,7 @@
     <string name="btn_success">Success!</string>
     <string name="msg_defaulting_success">Defaulting to Success…</string>
     <string name="label_time_alone">Time Alone</string>
+    <string name="label_adjustment">Adjustment (%)</string>
 
     <!-- Notification Channels -->
     <string name="channel_alarm_name">Alarm Notifications</string>

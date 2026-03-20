@@ -24,6 +24,7 @@ object AlarmPreferences {
     private val IS_ACTIVE = booleanPreferencesKey("is_active")
     private val REPEAT_DAYS = stringPreferencesKey("repeat_days")
     private val TIME_ALONE = longPreferencesKey("time_alone")
+    private val ADJUSTMENT_PERCENT = intPreferencesKey("adjustment_percent")
 
     fun configFlow(ctx: Context): Flow<AlarmConfig> =
         ctx.dataStore.data.map { p ->
@@ -44,7 +45,8 @@ object AlarmPreferences {
                     ?.mapNotNull { it.trim().toIntOrNull() }
                     ?.toSet()
                     ?: emptySet(),
-                timeAloneSeconds = p[TIME_ALONE] ?: 600L
+                timeAloneSeconds = p[TIME_ALONE] ?: 60L,
+                adjustmentPercent = p[ADJUSTMENT_PERCENT] ?: 10
             )
         }
 
@@ -64,12 +66,15 @@ object AlarmPreferences {
             p[IS_ACTIVE] = cfg.isActive
             p[REPEAT_DAYS] = cfg.repeatDays.joinToString(",")
             p[TIME_ALONE] = cfg.timeAloneSeconds
+            p[ADJUSTMENT_PERCENT] = cfg.adjustmentPercent
         }
     }
 
-    suspend fun updateTimeAlone(ctx: Context, multiplier: Double) {
+    suspend fun updateTimeAlone(ctx: Context, isSuccess: Boolean) {
         ctx.dataStore.edit { p ->
-            val current = p[TIME_ALONE] ?: 600L
+            val current = p[TIME_ALONE] ?: 60L
+            val pct = p[ADJUSTMENT_PERCENT] ?: 10
+            val multiplier = if (isSuccess) 1.0 + (pct / 100.0) else 1.0 - (pct / 100.0)
             val newVal = (current * multiplier).toLong().coerceIn(1L, 14400L)
             p[TIME_ALONE] = newVal
         }
