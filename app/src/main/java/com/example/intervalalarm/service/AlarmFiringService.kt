@@ -25,6 +25,8 @@ import com.example.intervalalarm.data.AlarmHistoryEntry
 import com.example.intervalalarm.data.AlarmPreferences
 import com.example.intervalalarm.R
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 
 class AlarmFiringService : Service() {
@@ -39,6 +41,7 @@ class AlarmFiringService : Service() {
     override fun onCreate() {
         super.onCreate()
         attributedContext = createAttributionContext("alarm_firing")
+        _isFiring.value = true
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -276,6 +279,7 @@ class AlarmFiringService : Service() {
         mediaPlayer = null
         vibratorManager?.cancel()
         vibratorManager = null
+        _isFiring.value = false
         scope.cancel()
         super.onDestroy()
     }
@@ -287,5 +291,8 @@ class AlarmFiringService : Service() {
         private const val NOTIF_ID_ALARM = 9002
 
         private var currentHistoryId: Long = -1L
+
+        private val _isFiring = MutableStateFlow(false)
+        val isFiring = _isFiring.asStateFlow()
     }
 }

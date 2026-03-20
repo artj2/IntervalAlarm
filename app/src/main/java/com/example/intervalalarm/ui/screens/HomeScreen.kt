@@ -29,6 +29,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(vm: AlarmViewModel) {
     val cfg by vm.config.collectAsState()
+    val isFiring by com.example.intervalalarm.service.AlarmFiringService.isFiring.collectAsState()
     val scroll = rememberScrollState()
     val ctx = LocalContext.current
 
@@ -46,6 +47,62 @@ fun HomeScreen(vm: AlarmViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Firing Status Card
+        if (isFiring) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.notif_alarm_title),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        stringResource(R.string.notif_alarm_text),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                val intent = Intent(ctx, com.example.intervalalarm.service.AlarmFiringService::class.java).apply {
+                                    action = com.example.intervalalarm.service.AlarmFiringService.ACTION_ACCEPT
+                                }
+                                ctx.startForegroundService(intent)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.btn_accept))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(ctx, com.example.intervalalarm.service.AlarmFiringService::class.java).apply {
+                                    action = com.example.intervalalarm.service.AlarmFiringService.ACTION_DISMISS
+                                }
+                                ctx.startForegroundService(intent)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text(stringResource(R.string.btn_dismiss))
+                        }
+                    }
+                }
+            }
+        }
+
         // Status Card
         Card(
             colors = CardDefaults.cardColors(
