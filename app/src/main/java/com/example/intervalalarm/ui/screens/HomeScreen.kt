@@ -46,7 +46,7 @@ fun HomeScreen(vm: AlarmViewModel) {
             .fillMaxSize()
             .verticalScroll(scroll)
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         // Firing Status Card
         if (isFiring) {
@@ -55,7 +55,8 @@ fun HomeScreen(vm: AlarmViewModel) {
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.onErrorContainer
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                modifier = Modifier.padding(bottom = 4.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -102,13 +103,16 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
         }
 
+        Spacer(modifier = Modifier.height(4.dp))
+
         // Status Card
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = if (cfg.isActive)
                     MaterialTheme.colorScheme.primaryContainer
                 else MaterialTheme.colorScheme.surfaceVariant
-            )
+            ),
+            modifier = Modifier.weight(1f, fill = false)
         ) {
             Row(
                 modifier = Modifier
@@ -143,10 +147,12 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
         }
 
+        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
+
         // Time Window
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
         ) {
             TimePickerCard(
                 label = stringResource(R.string.label_start),
@@ -166,9 +172,11 @@ fun HomeScreen(vm: AlarmViewModel) {
             )
         }
 
+        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
+
         // Time Alone & Adjustment
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -189,10 +197,12 @@ fun HomeScreen(vm: AlarmViewModel) {
             )
         }
 
+        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
+
         // Interval Range
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
         ) {
             IntervalField(
                 label = "Min Int",
@@ -214,8 +224,10 @@ fun HomeScreen(vm: AlarmViewModel) {
             )
         }
 
+        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
+
         // Alert Toggles
-        Card {
+        Card(modifier = Modifier.weight(1f, fill = false)) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
                 ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled) {
                     vm.updateConfig { copy(soundEnabled = it) }
@@ -265,10 +277,12 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
         }
 
+        Spacer(modifier = Modifier.weight(0.5f, fill = false).heightIn(min = 4.dp))
+
         // Repeat Days
         Row(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
         ) {
             for (dow in DayOfWeek.entries) {
                 val selected = cfg.repeatDays.contains(dow.value)
@@ -299,7 +313,8 @@ fun HomeScreen(vm: AlarmViewModel) {
             Text(
                 stringResource(R.string.warning_window_too_small),
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(vertical = 4.dp)
             )
         }
     }
