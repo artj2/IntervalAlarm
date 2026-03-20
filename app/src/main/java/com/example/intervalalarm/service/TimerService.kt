@@ -102,6 +102,30 @@ class TimerService : Service() {
         }
     }
 
+    private fun showCompletionNotification(isSuccess: Boolean) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 3, intent, PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = if (isSuccess) getString(R.string.msg_congrats) else "Time Alone Failed"
+        val text = if (isSuccess) getString(R.string.btn_success) else "The session has ended."
+
+        val notif = NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_TIMER_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIF_ID_ALERT, notif)
+    }
+
     private fun finalActionSuccess() {
         decisionJob?.cancel()
         releaseWakeLock()
@@ -109,6 +133,7 @@ class TimerService : Service() {
             updateHistory("SUCCESS", _initialSeconds.value)
             AlarmPreferences.updateTimeAlone(this@TimerService, 1.1)
             resumeIntervals()
+            showCompletionNotification(true)
             stopSelf()
         }
     }
@@ -120,6 +145,7 @@ class TimerService : Service() {
             updateHistory("FAILED", _initialSeconds.value)
             AlarmPreferences.updateTimeAlone(this@TimerService, 0.9)
             resumeIntervals()
+            showCompletionNotification(false)
             stopSelf()
         }
     }
@@ -200,6 +226,7 @@ class TimerService : Service() {
         const val EXTRA_SECONDS = "extra_seconds"
         const val EXTRA_HISTORY_ID = "extra_history_id"
         private const val NOTIF_ID = 9003
+        private const val NOTIF_ID_ALERT = 9004
 
         private val _remainingSeconds = MutableStateFlow(0L)
         val remainingSeconds = _remainingSeconds.asStateFlow()

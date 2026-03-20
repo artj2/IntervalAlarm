@@ -10,6 +10,7 @@ class IntervalAlarmApp : Application() {
         const val CHANNEL_ALARM = "interval_alarm_channel"
         const val CHANNEL_SERVICE = "alarm_service_channel"
         const val CHANNEL_TIMER = "timer_service_channel"
+        const val CHANNEL_TIMER_ALERTS = "timer_alerts_channel"
     }
 
     override fun onCreate() {
@@ -46,6 +47,18 @@ class IntervalAlarmApp : Application() {
             ).apply {
                 setSound(null, null)
                 enableVibration(false)
+            }
+        )
+
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_TIMER_ALERTS,
+                "Timer Completion Alerts",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                setSound(null, null)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 300)
             }
         )
     }
