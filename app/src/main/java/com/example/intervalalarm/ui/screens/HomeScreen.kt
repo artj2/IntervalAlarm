@@ -128,7 +128,7 @@ fun HomeScreen(vm: AlarmViewModel) {
                 configValue = cfg.minIntervalMin,
                 enabled = !cfg.isActive,
                 onCommit = { v ->
-                    vm.updateConfig { copy(minIntervalMin = v.coerceIn(1, maxIntervalMin)) }
+                    vm.updateConfig { copy(minIntervalMin = v.coerceIn(1, cfg.maxIntervalMin)) }
                 },
                 modifier = Modifier.weight(1f)
             )
@@ -137,7 +137,7 @@ fun HomeScreen(vm: AlarmViewModel) {
                 configValue = cfg.maxIntervalMin,
                 enabled = !cfg.isActive,
                 onCommit = { v ->
-                    vm.updateConfig { copy(maxIntervalMin = v.coerceAtLeast(minIntervalMin)) }
+                    vm.updateConfig { copy(maxIntervalMin = v.coerceAtLeast(cfg.minIntervalMin)) }
                 },
                 modifier = Modifier.weight(1f)
             )
@@ -394,16 +394,17 @@ private fun IntervalField(
     onCommit: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Local text state decoupled from the config — only syncs on focus loss
     var text by remember(configValue) { mutableStateOf(configValue.toString()) }
-    var hasFocus by remember { mutableStateOf(false) }
 
     OutlinedTextField(
         value = text,
         onValueChange = { newText ->
-            // Allow empty string and digits only
             if (newText.isEmpty() || newText.all { it.isDigit() }) {
                 text = newText
+                val parsed = newText.toIntOrNull()
+                if (parsed != null && parsed > 0) {
+                    onCommit(parsed)
+                }
             }
         },
         label = { Text(label) },
@@ -411,19 +412,6 @@ private fun IntervalField(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier
-            .onFocusChanged { focusState ->
-                if (hasFocus && !focusState.isFocused) {
-                    // Lost focus — commit the value
-                    val parsed = text.toIntOrNull()
-                    if (parsed != null && parsed > 0) {
-                        onCommit(parsed)
-                    } else {
-                        // Reset to current config value if invalid/empty
-                        text = configValue.toString()
-                    }
-                }
-                hasFocus = focusState.isFocused
-            }
     )
 }
 
