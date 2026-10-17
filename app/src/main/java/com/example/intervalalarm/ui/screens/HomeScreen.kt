@@ -113,16 +113,31 @@ fun HomeScreen(vm: AlarmViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
                         Text(if (cfg.isActive) stringResource(R.string.status_active) else stringResource(R.string.status_inactive), style = titleStyle)
                         if (cfg.isActive) {
                             Text(stringResource(R.string.running_range, fmtTime(cfg.startHour, cfg.startMinute), fmtTime(cfg.endHour, cfg.endMinute)), style = bodyStyle)
                         }
                     }
-                    FilledTonalButton(
-                        onClick = { vm.toggleActive() },
-                        modifier = Modifier.height(44.dp * scaleFactor)
-                    ) { Text(if (cfg.isActive) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start), fontSize = bodyStyle.fontSize) }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilledTonalButton(
+                            onClick = { vm.startManualAloneTime() },
+                            modifier = Modifier.height(44.dp * scaleFactor),
+                            contentPadding = PaddingValues(horizontal = (12.dp * scaleFactor).coerceIn(8.dp, 16.dp))
+                        ) {
+                            Text(stringResource(R.string.btn_alone_time), fontSize = bodyStyle.fontSize)
+                        }
+                        FilledTonalButton(
+                            onClick = { vm.toggleActive() },
+                            modifier = Modifier.height(44.dp * scaleFactor),
+                            contentPadding = PaddingValues(horizontal = (12.dp * scaleFactor).coerceIn(8.dp, 16.dp))
+                        ) {
+                            Text(if (cfg.isActive) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start), fontSize = bodyStyle.fontSize)
+                        }
+                    }
                 }
             }
 

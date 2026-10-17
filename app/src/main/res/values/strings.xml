@@ -13,6 +13,7 @@
     <string name="running_range">Running from %1$s to %2$s</string>
     <string name="btn_start">Start</string>
     <string name="btn_stop">Stop</string>
+    <string name="btn_alone_time">Alone T</string>
     <string name="time_window">Time Window</string>
     <string name="label_start">Start</string>
     <string name="label_end">End</string>

@@ -1,6 +1,7 @@
 package com.example.intervalalarm.ui
 
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.intervalalarm.alarm.AlarmScheduler
@@ -8,6 +9,8 @@ import com.example.intervalalarm.data.AlarmHistoryDatabase
 import com.example.intervalalarm.data.AlarmHistoryEntry
 import com.example.intervalalarm.data.AlarmPreferences
 import com.example.intervalalarm.model.AlarmConfig
+import com.example.intervalalarm.service.AlarmFiringService
+import com.example.intervalalarm.service.TimerService
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -43,6 +46,37 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                 val activeCfg = cfg.copy(isActive = true)
                 AlarmScheduler.schedule(ctx, activeCfg)
             }
+        }
+    }
+
+    fun startManualAloneTime() {
+        viewModelScope.launch {
+            if (TimerService.remainingSeconds.value > 0 || TimerService.isFinished.value) {
+                return@launch
+            }
+
+            if (AlarmFiringService.isFiring.value) {
+                val intent = Intent(ctx, AlarmFiringService::class.java).apply {
+                    action = AlarmFiringService.ACTION_ACCEPT
+                }
+                ctx.startForegroundService(intent)
+                return@launch
+            }
+
+            val cfg = config.value
+            val historyId = historyDao.insert(
+                AlarmHistoryEntry(
+                    status = "FIRED",
+                    initialTimeAloneSeconds = cfg.timeAloneSeconds
+                )
+            )
+
+            val intent = Intent(ctx, TimerService::class.java).apply {
+                action = TimerService.ACTION_START
+                putExtra(TimerService.EXTRA_SECONDS, cfg.timeAloneSeconds)
+                putExtra(TimerService.EXTRA_HISTORY_ID, historyId)
+            }
+            ctx.startForegroundService(intent)
         }
     }
 
