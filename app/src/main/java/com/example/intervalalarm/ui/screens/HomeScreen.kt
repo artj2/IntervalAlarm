@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -48,6 +49,13 @@ fun HomeScreen(vm: AlarmViewModel) {
         val bodyStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = (MaterialTheme.typography.bodyMedium.fontSize * scaleFactor))
         val titleStyle = MaterialTheme.typography.titleMedium.copy(fontSize = (MaterialTheme.typography.titleMedium.fontSize * scaleFactor))
         val largeStyle = MaterialTheme.typography.headlineMedium.copy(fontSize = (MaterialTheme.typography.headlineMedium.fontSize * scaleFactor))
+        val sectionHeaderStyle = MaterialTheme.typography.titleSmall.copy(
+            fontSize = (MaterialTheme.typography.titleSmall.fontSize * scaleFactor),
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        val sectionTopPadding = (14.dp * scaleFactor).coerceIn(10.dp, 20.dp)
+        val sectionBottomPadding = (4.dp * scaleFactor).coerceIn(2.dp, 6.dp)
 
         Column(
             modifier = Modifier
@@ -119,8 +127,12 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
 
             // Time Window Section
-            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
-                Text(stringResource(R.string.time_window), style = labelStyle)
+            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Top) {
+                Text(
+                    stringResource(R.string.time_window),
+                    style = sectionHeaderStyle,
+                    modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
+                )
                 Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TimePickerCard(
                         label = stringResource(R.string.label_start),
@@ -140,10 +152,23 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
 
             // Time Alone Section
-            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.label_time_alone), style = labelStyle, modifier = Modifier.weight(1.5f))
-                    Text(stringResource(R.string.label_adjustment), style = labelStyle, modifier = Modifier.weight(1f))
+            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Top) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = sectionTopPadding, bottom = sectionBottomPadding),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.label_time_alone),
+                        style = sectionHeaderStyle,
+                        modifier = Modifier.weight(1.5f)
+                    )
+                    Text(
+                        stringResource(R.string.label_adjustment),
+                        style = sectionHeaderStyle,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
                 Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     DurationPickerCard(
@@ -160,8 +185,12 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
 
             // Interval Range Section
-            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
-                Text(stringResource(R.string.interval_range), style = labelStyle)
+            Column(modifier = Modifier.weight(1.5f).fillMaxWidth(), verticalArrangement = Arrangement.Top) {
+                Text(
+                    stringResource(R.string.interval_range),
+                    style = sectionHeaderStyle,
+                    modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
+                )
                 Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IntervalField(
                         label = "Min Int", configValue = cfg.minIntervalMin, enabled = !cfg.isActive, textStyle = bodyStyle, labelStyle = labelStyle,
@@ -177,9 +206,13 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
 
             // Alerts Section
-            Column(modifier = Modifier.weight(1.2f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
-                Text(stringResource(R.string.section_alerts), style = labelStyle)
-                Card(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+            Column(modifier = Modifier.weight(1.2f).fillMaxWidth(), verticalArrangement = Arrangement.Top) {
+                Text(
+                    stringResource(R.string.section_alerts),
+                    style = sectionHeaderStyle,
+                    modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
+                )
+                Card(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     Column(modifier = Modifier.padding(horizontal = 12.dp).fillMaxSize(), verticalArrangement = Arrangement.Center) {
                         ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(soundEnabled = it) } }
                         ToggleRow(stringResource(R.string.alert_vibration), cfg.vibrationEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(vibrationEnabled = it) } }
@@ -188,8 +221,12 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
 
             // Repeat Days Section
-            Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
-                Text(stringResource(R.string.section_repeat), style = labelStyle)
+            Column(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Top) {
+                Text(
+                    stringResource(R.string.section_repeat),
+                    style = sectionHeaderStyle,
+                    modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
+                )
                 Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (dow in DayOfWeek.entries) {
                         val selected = cfg.repeatDays.contains(dow.value)
