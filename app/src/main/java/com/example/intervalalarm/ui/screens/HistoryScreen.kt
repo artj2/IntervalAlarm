@@ -7,9 +7,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import com.example.intervalalarm.BuildConfig
 import com.example.intervalalarm.R
 import com.example.intervalalarm.data.AlarmHistoryEntry
 import com.example.intervalalarm.ui.AlarmViewModel
@@ -23,21 +25,33 @@ fun HistoryScreen(vm: AlarmViewModel) {
     var showClearDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (entries.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                pluralStringResource(R.plurals.alarms_logged, entries.size, entries.size),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "v${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+            )
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterEnd
             ) {
-                Text(
-                    pluralStringResource(R.plurals.alarms_logged, entries.size, entries.size),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TextButton(onClick = { showClearDialog = true }) {
-                    Text(stringResource(R.string.btn_clear_all), color = MaterialTheme.colorScheme.error)
+                if (entries.isNotEmpty()) {
+                    TextButton(onClick = { showClearDialog = true }) {
+                        Text(stringResource(R.string.btn_clear_all), color = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         }
