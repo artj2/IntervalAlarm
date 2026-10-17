@@ -236,6 +236,19 @@ fun HomeScreen(vm: AlarmViewModel) {
                 }
             }
 
+            // Almost Done Alert Section
+            Text(
+                stringResource(R.string.section_almost_done),
+                style = sectionHeaderStyle,
+                modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
+            )
+            AlmostDonePickerCard(
+                seconds = cfg.almostDoneSeconds,
+                enabled = !cfg.isActive,
+                textStyle = largeStyle,
+                onPick = { vm.updateConfig { copy(almostDoneSeconds = it) } }
+            )
+
             // Repeat Days Section
             Text(
                 stringResource(R.string.section_repeat),
@@ -350,6 +363,85 @@ private fun DurationPickerCard(
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun AlmostDonePickerCard(
+    seconds: Long,
+    enabled: Boolean,
+    textStyle: androidx.compose.ui.text.TextStyle,
+    onPick: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val m = seconds / 60
+    val s = seconds % 60
+
+    OutlinedCard(onClick = { if (enabled) showDialog = true }, modifier = modifier, enabled = enabled) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val display = if (seconds == 0L) {
+                stringResource(R.string.label_off)
+            } else {
+                "%02d:%02d".format(m, s)
+            }
+            Text(display, style = textStyle)
+        }
+    }
+
+    if (showDialog) {
+        var localM by remember { mutableStateOf(m.toString()) }
+        var localS by remember { mutableStateOf(s.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newM = localM.toLongOrNull() ?: 0L
+                    val newS = localS.toLongOrNull() ?: 0L
+                    val total = (newM * 60 + newS).coerceIn(0L, 3600L)
+                    onPick(total)
+                    showDialog = false
+                }) { Text(stringResource(R.string.dialog_ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.dialog_cancel)) }
+            },
+            title = { Text(stringResource(R.string.section_almost_done)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.hint_almost_done_dialog),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = localM,
+                            onValueChange = { if (it.length <= 2 && it.all { char -> char.isDigit() }) localM = it },
+                            label = { Text("M") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                        OutlinedTextField(
+                            value = localS,
+                            onValueChange = { if (it.length <= 2 && it.all { char -> char.isDigit() }) localS = it },
+                            label = { Text("S") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
                 }
             }
         )

@@ -74,6 +74,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             val intent = Intent(ctx, TimerService::class.java).apply {
                 action = TimerService.ACTION_START
                 putExtra(TimerService.EXTRA_SECONDS, cfg.timeAloneSeconds)
+                putExtra(TimerService.EXTRA_ALMOST_DONE_SECONDS, cfg.almostDoneSeconds)
                 putExtra(TimerService.EXTRA_HISTORY_ID, historyId)
             }
             ctx.startForegroundService(intent)

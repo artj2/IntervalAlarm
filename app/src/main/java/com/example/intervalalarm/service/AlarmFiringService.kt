@@ -215,6 +215,7 @@ class AlarmFiringService : Service() {
                     action = TimerService.ACTION_START
                     putExtra(TimerService.EXTRA_SECONDS, cfg.timeAloneSeconds)
                     putExtra(TimerService.EXTRA_HISTORY_ID, currentHistoryId)
+                    putExtra(TimerService.EXTRA_ALMOST_DONE_SECONDS, cfg.almostDoneSeconds)
                 }
                 startForegroundService(intent)
             } finally {

@@ -53,7 +53,7 @@ class IntervalAlarmApp : Application() {
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_TIMER_ALERTS,
-                "Timer Completion Alerts",
+                "Timer Alerts",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 setSound(null, null)

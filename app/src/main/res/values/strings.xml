@@ -57,6 +57,10 @@
     <string name="msg_defaulting_success">Defaulting to Success…</string>
     <string name="label_time_alone">Time Alone</string>
     <string name="label_adjustment">Adjustment (%)</string>
+    <string name="section_almost_done">Almost Done Alert</string>
+    <string name="notif_almost_done_text">Almost Done</string>
+    <string name="label_off">Off</string>
+    <string name="hint_almost_done_dialog">Set to 00:00 to turn off</string>
 
     <!-- Notification Channels -->
     <string name="channel_alarm_name">Alarm Notifications</string>

@@ -16,8 +16,9 @@ The app combines **randomized departure interval alerts** (telling the owner whe
 - **Custom Alerts**: Configurable alarm ringtone (system ringtone picker) and vibration patterns.
 
 ### 2. ⏳ Adaptive "Time Alone" Training Timer
-- **Quick Handoff**: When a departure alarm fires, tapping **Accept** immediately transitions into the alone-time countdown session.
+- **Trigger Anywhere**: Start an alone-time session on demand with the **Alone T** button, or accept an automated interval departure alarm to seamlessly transition into countdown mode.
 - **Background Persistence**: The timer runs in a foreground service backed by a `PARTIAL_WAKE_LOCK` to ensure it continues ticking accurately even when the phone is locked.
+- **Almost Done Warning Notification**: Configurable warning notification ("Almost Done") with a short vibration when approaching the end of alone time (default 1 minute; set to 00:00 to disable).
 - **Smart Auto-Adjustment**:
   - **Success!**: When the timer completes without distress, a 10-second Congratulations screen appears (defaulting to Success). The app automatically increases the target duration by your configured adjustment percentage (e.g., +10%).
   - **Failed**: If your dog whines, barks, or shows distress before the timer ends, tapping **Failed** stops the session early, records the exact elapsed time, and decreases the target duration by the configured percentage (e.g., -10%).

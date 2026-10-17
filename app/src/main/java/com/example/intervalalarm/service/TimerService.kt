@@ -8,6 +8,8 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import com.example.intervalalarm.IntervalAlarmApp
 import com.example.intervalalarm.MainActivity
@@ -27,6 +29,8 @@ class TimerService : Service() {
     private var timerJob: Job? = null
     private var decisionJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var almostDoneAlertShown = false
+    private var almostDoneThresholdSeconds: Long = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -35,8 +39,9 @@ class TimerService : Service() {
             ACTION_START -> {
                 val initialSeconds = intent.getLongExtra(EXTRA_SECONDS, 60L)
                 val historyId = intent.getLongExtra(EXTRA_HISTORY_ID, -1L)
+                val almostDoneSeconds = intent.getLongExtra(EXTRA_ALMOST_DONE_SECONDS, 60L)
                 acquireWakeLock()
-                startTimer(initialSeconds, historyId)
+                startTimer(initialSeconds, historyId, almostDoneSeconds)
             }
             ACTION_FAILED -> {
                 if (_isFinished.value) {
@@ -66,12 +71,14 @@ class TimerService : Service() {
         wakeLock = null
     }
 
-    private fun startTimer(seconds: Long, historyId: Long) {
+    private fun startTimer(seconds: Long, historyId: Long, almostDoneSeconds: Long = 60L) {
         _remainingSeconds.value = seconds
         _initialSeconds.value = seconds
         currentHistoryId = historyId
         _isFinished.value = false
         _decisionTimerSeconds.value = 10
+        almostDoneAlertShown = false
+        almostDoneThresholdSeconds = almostDoneSeconds
 
         startForeground(
             NOTIF_ID,
@@ -85,9 +92,46 @@ class TimerService : Service() {
                 delay(1000)
                 _remainingSeconds.value -= 1
                 updateNotification(_remainingSeconds.value)
+
+                if (!almostDoneAlertShown &&
+                    almostDoneThresholdSeconds > 0 &&
+                    _initialSeconds.value > almostDoneThresholdSeconds &&
+                    _remainingSeconds.value <= almostDoneThresholdSeconds
+                ) {
+                    almostDoneAlertShown = true
+                    showAlmostDoneNotification()
+                }
             }
             startDecisionPhase()
         }
+    }
+
+    private fun showAlmostDoneNotification() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 4, intent, PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notif = NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_TIMER_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(getString(R.string.notif_alarm_title))
+            .setContentText(getString(R.string.notif_almost_done_text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIF_ID_ALMOST_DONE, notif)
+
+        try {
+            val vm = getSystemService(VibratorManager::class.java)
+            vm?.defaultVibrator?.vibrate(
+                VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE)
+            )
+        } catch (_: Exception) {}
     }
 
     private fun startDecisionPhase() {
@@ -214,6 +258,8 @@ class TimerService : Service() {
         decisionJob?.cancel()
         releaseWakeLock()
         scope.cancel()
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.cancel(NOTIF_ID_ALMOST_DONE)
         _isFinished.value = false
         _remainingSeconds.value = 0
         super.onDestroy()
@@ -225,8 +271,10 @@ class TimerService : Service() {
         const val ACTION_SUCCESS = "com.example.intervalalarm.SUCCESS_TIMER"
         const val EXTRA_SECONDS = "extra_seconds"
         const val EXTRA_HISTORY_ID = "extra_history_id"
+        const val EXTRA_ALMOST_DONE_SECONDS = "extra_almost_done_seconds"
         private const val NOTIF_ID = 9003
         private const val NOTIF_ID_ALERT = 9004
+        private const val NOTIF_ID_ALMOST_DONE = 9005
 
         private val _remainingSeconds = MutableStateFlow(0L)
         val remainingSeconds = _remainingSeconds.asStateFlow()

@@ -24,6 +24,7 @@ object AlarmPreferences {
     private val REPEAT_DAYS = stringPreferencesKey("repeat_days")
     private val TIME_ALONE = longPreferencesKey("time_alone")
     private val ADJUSTMENT_PERCENT = intPreferencesKey("adjustment_percent")
+    private val ALMOST_DONE_SECONDS = longPreferencesKey("almost_done_seconds")
 
     fun configFlow(ctx: Context): Flow<AlarmConfig> =
         ctx.dataStore.data.map { p ->
@@ -44,7 +45,8 @@ object AlarmPreferences {
                     ?.toSet()
                     ?: emptySet(),
                 timeAloneSeconds = p[TIME_ALONE] ?: 60L,
-                adjustmentPercent = p[ADJUSTMENT_PERCENT] ?: 10
+                adjustmentPercent = p[ADJUSTMENT_PERCENT] ?: 10,
+                almostDoneSeconds = p[ALMOST_DONE_SECONDS] ?: 60L
             )
         }
 
@@ -64,6 +66,7 @@ object AlarmPreferences {
             p[REPEAT_DAYS] = cfg.repeatDays.joinToString(",")
             p[TIME_ALONE] = cfg.timeAloneSeconds
             p[ADJUSTMENT_PERCENT] = cfg.adjustmentPercent
+            p[ALMOST_DONE_SECONDS] = cfg.almostDoneSeconds
         }
     }
 

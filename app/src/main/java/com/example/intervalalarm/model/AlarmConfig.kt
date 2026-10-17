@@ -13,7 +13,8 @@ data class AlarmConfig(
     val isActive: Boolean = false,
     val repeatDays: Set<Int> = emptySet(),
     val timeAloneSeconds: Long = 60L,
-    val adjustmentPercent: Int = 10
+    val adjustmentPercent: Int = 10,
+    val almostDoneSeconds: Long = 60L
 ) {
     val windowMinutes: Int
         get() {
