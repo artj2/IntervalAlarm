@@ -13,6 +13,11 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.random.Random
 
+data class NextTriggerDisplay(
+    val timeText: String,
+    val countdownText: String
+)
+
 object AlarmScheduler {
 
     private const val REQ_CODE = 1001
@@ -111,9 +116,12 @@ object AlarmScheduler {
         AlarmPreferences.setNextTriggerMillis(ctx, null)
     }
 
-    fun formatNextTrigger(ctx: Context, triggerMillis: Long?, nowMillis: Long = System.currentTimeMillis()): String {
+    fun getNextTriggerDisplay(ctx: Context, triggerMillis: Long?, nowMillis: Long = System.currentTimeMillis()): NextTriggerDisplay {
         if (triggerMillis == null || triggerMillis <= 0L) {
-            return ctx.getString(R.string.next_none_scheduled)
+            return NextTriggerDisplay(
+                timeText = ctx.getString(R.string.next_none_scheduled),
+                countdownText = ""
+            )
         }
         val zone = ZoneId.systemDefault()
         val now = Instant.ofEpochMilli(nowMillis).atZone(zone)
@@ -128,7 +136,7 @@ object AlarmScheduler {
         val nowDate = now.toLocalDate()
         val triggerDate = trigger.toLocalDate()
 
-        val datePrefix = when {
+        val timeText = when {
             triggerDate == nowDate -> timeStr
             triggerDate == nowDate.plusDays(1) -> ctx.getString(R.string.time_tomorrow_at, timeStr)
             else -> ctx.getString(
@@ -138,22 +146,24 @@ object AlarmScheduler {
             )
         }
 
-        if (diffMs <= 0L) {
-            return ctx.getString(R.string.next_due_now, datePrefix)
-        }
-
-        val relStr = when {
-            diffMinutes < 1L -> "< 1m"
-            diffHours < 1L -> "${diffMinutes}m"
-            diffHours < 24L -> if (remainingMins > 0L) "${diffHours}h ${remainingMins}m" else "${diffHours}h"
+        val countdownText = when {
+            diffMs <= 0L -> ctx.getString(R.string.next_due_now)
+            diffMinutes < 1L -> ctx.getString(R.string.next_less_than_min)
+            diffHours < 1L -> if (diffMinutes == 1L) "in 1 minute" else "in $diffMinutes minutes"
+            diffHours < 24L -> if (remainingMins > 0L) "in ${diffHours}h ${remainingMins}m" else if (diffHours == 1L) "in 1 hour" else "in $diffHours hours"
             else -> {
                 val days = diffHours / 24L
                 val remHours = diffHours % 24L
-                if (remHours > 0L) "${days}d ${remHours}h" else "${days}d"
+                if (remHours > 0L) "in ${days}d ${remHours}h" else if (days == 1L) "in 1 day" else "in $days days"
             }
         }
 
-        return ctx.getString(R.string.next_in_format, datePrefix, relStr)
+        return NextTriggerDisplay(timeText = timeText, countdownText = countdownText)
+    }
+
+    fun formatNextTrigger(ctx: Context, triggerMillis: Long?, nowMillis: Long = System.currentTimeMillis()): String {
+        val display = getNextTriggerDisplay(ctx, triggerMillis, nowMillis)
+        return if (display.timeText == "—") display.countdownText else "Next: ${display.timeText} (${display.countdownText})"
     }
 
     private fun makePendingIntent(ctx: Context): PendingIntent {

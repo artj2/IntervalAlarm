@@ -63,9 +63,10 @@
     <string name="hint_almost_done_dialog">Set to 00:00 to turn off</string>
     <string name="btn_view_settings">View Settings</string>
     <string name="btn_hide_settings">Hide Settings</string>
-    <string name="next_none_scheduled">Next: None scheduled</string>
-    <string name="next_due_now">Next: %1$s (due now)</string>
-    <string name="next_in_format">Next: %1$s (in %2$s)</string>
+    <string name="section_next_alone_time">Next Alone Time</string>
+    <string name="next_none_scheduled">None scheduled</string>
+    <string name="next_due_now">Due now</string>
+    <string name="next_less_than_min">in less than a minute</string>
     <string name="time_tomorrow_at">Tomorrow at %1$s</string>
     <string name="time_day_at">%1$s at %2$s</string>
 

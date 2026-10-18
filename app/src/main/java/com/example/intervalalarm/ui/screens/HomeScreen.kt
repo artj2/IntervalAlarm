@@ -119,7 +119,7 @@ fun HomeScreen(vm: AlarmViewModel) {
             // Status Section
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = if (cfg.isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = if (cfg.isActive) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -134,13 +134,16 @@ fun HomeScreen(vm: AlarmViewModel) {
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Text(if (cfg.isActive) stringResource(R.string.status_active) else stringResource(R.string.status_inactive), style = titleStyle)
+                        Text(
+                            if (cfg.isActive) stringResource(R.string.status_active) else stringResource(R.string.status_inactive),
+                            style = titleStyle,
+                            color = if (cfg.isActive) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         if (cfg.isActive) {
-                            Text(stringResource(R.string.running_range, fmtTime(cfg.startHour, cfg.startMinute), fmtTime(cfg.endHour, cfg.endMinute)), style = bodyStyle)
                             Text(
-                                AlarmScheduler.formatNextTrigger(ctx, cfg.nextTriggerMillis, currentTime),
-                                style = bodyStyle.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                stringResource(R.string.running_range, fmtTime(cfg.startHour, cfg.startMinute), fmtTime(cfg.endHour, cfg.endMinute)),
+                                style = bodyStyle,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
                             )
                         }
                     }
@@ -167,6 +170,16 @@ fun HomeScreen(vm: AlarmViewModel) {
             }
 
             if (cfg.isActive) {
+                // Next Alone Time Section (under "Alarm Active" and above "Alerts")
+                NextAloneTimeSection(
+                    cfg = cfg,
+                    nowMillis = currentTime,
+                    headerStyle = sectionHeaderStyle,
+                    scaleFactor = scaleFactor,
+                    topPadding = sectionTopPadding,
+                    bottomPadding = sectionBottomPadding
+                )
+
                 // When active: Alerts section is always visible and editable
                 AlertsSection(
                     cfg = cfg, vm = vm,
@@ -224,6 +237,61 @@ fun HomeScreen(vm: AlarmViewModel) {
 }
 
 // ── Sections ─────────────────────────────────────────────
+
+@Composable
+private fun NextAloneTimeSection(
+    cfg: com.example.intervalalarm.model.AlarmConfig,
+    nowMillis: Long,
+    headerStyle: androidx.compose.ui.text.TextStyle,
+    scaleFactor: Float,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    val ctx = LocalContext.current
+    val display = remember(cfg.nextTriggerMillis, nowMillis) {
+        AlarmScheduler.getNextTriggerDisplay(ctx, cfg.nextTriggerMillis, nowMillis)
+    }
+
+    Text(
+        stringResource(R.string.section_next_alone_time),
+        style = headerStyle,
+        modifier = Modifier.padding(top = topPadding, bottom = bottomPadding)
+    )
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = (18.dp * scaleFactor).coerceIn(14.dp, 26.dp), horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = display.timeText,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontSize = (MaterialTheme.typography.displaySmall.fontSize * scaleFactor),
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            if (display.countdownText.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp * scaleFactor))
+                Text(
+                    text = display.countdownText,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = (MaterialTheme.typography.titleMedium.fontSize * scaleFactor),
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun TimeWindowSection(

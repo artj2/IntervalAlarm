@@ -13,7 +13,7 @@ The app combines **randomized departure interval alerts** (telling the owner whe
 - **Randomized Intervals**: Define a minimum and maximum interval range (e.g., 40–80 minutes). The app schedules alarms at randomized intervals within the window to prevent your dog from anticipating departure patterns.
 - **Repeat Days**: Select specific days of the week or leave unselected for manual single-day training.
 - **Reliable Alarms**: Scheduled using Android's `AlarmManager.setExactAndAllowWhileIdle` and automatically rescheduled upon device reboot (`BOOT_COMPLETED`).
-- **Next Departure Countdown**: Displays the upcoming departure time and real-time relative countdown (e.g., `Next: 14:35 (in 42m)`) directly inside the status card while the alarm is active.
+- **Next Departure Countdown**: Dedicated prominent section displaying the upcoming departure time and real-time countdown (e.g., `14:35` / `in 42 minutes`) under the status card while the alarm is active.
 - **Clean Active Dashboard**: Automatically hides blocked configuration settings while active to reduce clutter, with an expandable **View Settings** toggle to inspect them read-only.
 - **Custom Alerts**: Configurable alarm ringtone (system ringtone picker) and vibration patterns.
 
