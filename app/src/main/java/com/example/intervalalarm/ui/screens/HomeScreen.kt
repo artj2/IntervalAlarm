@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -160,6 +161,14 @@ fun HomeScreen(vm: AlarmViewModel) {
                         }
                         FilledTonalButton(
                             onClick = { vm.toggleActive() },
+                            colors = if (cfg.isActive) {
+                                ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = Color(0xFFFFD1DC),
+                                    contentColor = Color(0xFF4A151C)
+                                )
+                            } else {
+                                ButtonDefaults.filledTonalButtonColors()
+                            },
                             modifier = Modifier.height(44.dp * scaleFactor),
                             contentPadding = PaddingValues(horizontal = (12.dp * scaleFactor).coerceIn(8.dp, 16.dp))
                         ) {
