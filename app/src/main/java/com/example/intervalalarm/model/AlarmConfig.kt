@@ -14,7 +14,8 @@ data class AlarmConfig(
     val repeatDays: Set<Int> = emptySet(),
     val timeAloneSeconds: Long = 60L,
     val adjustmentPercent: Int = 10,
-    val almostDoneSeconds: Long = 60L
+    val almostDoneSeconds: Long = 60L,
+    val nextTriggerMillis: Long? = null
 ) {
     val windowMinutes: Int
         get() {

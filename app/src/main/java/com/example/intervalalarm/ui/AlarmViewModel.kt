@@ -64,6 +64,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             val cfg = config.value
+            if (cfg.isActive) {
+                AlarmScheduler.cancel(ctx)
+            }
             val historyId = historyDao.insert(
                 AlarmHistoryEntry(
                     status = "FIRED",
@@ -78,6 +81,20 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                 putExtra(TimerService.EXTRA_HISTORY_ID, historyId)
             }
             ctx.startForegroundService(intent)
+        }
+    }
+
+    fun checkAndRescheduleIfOverdue() {
+        viewModelScope.launch {
+            val cfg = config.value
+            val isBusy = AlarmFiringService.isFiring.value || TimerService.remainingSeconds.value > 0 || TimerService.isFinished.value
+            if (cfg.isActive && !isBusy) {
+                val overdue = cfg.nextTriggerMillis != null && cfg.nextTriggerMillis < System.currentTimeMillis() - 60_000L
+                val missing = cfg.nextTriggerMillis == null
+                if (overdue || missing) {
+                    AlarmScheduler.schedule(ctx, cfg)
+                }
+            }
         }
     }
 

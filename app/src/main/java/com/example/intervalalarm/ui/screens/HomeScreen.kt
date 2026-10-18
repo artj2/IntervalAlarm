@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,8 +24,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.example.intervalalarm.R
+import com.example.intervalalarm.alarm.AlarmScheduler
 import com.example.intervalalarm.ui.AlarmViewModel
 import com.example.intervalalarm.service.AlarmFiringService
+import kotlinx.coroutines.delay
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
@@ -34,6 +39,18 @@ fun HomeScreen(vm: AlarmViewModel) {
     val isFiring by AlarmFiringService.isFiring.collectAsState()
     val scroll = rememberScrollState()
     val ctx = LocalContext.current
+
+    val currentTime by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            delay(10_000L)
+            value = System.currentTimeMillis()
+        }
+    }
+    var showSettings by remember(cfg.isActive) { mutableStateOf(false) }
+
+    LaunchedEffect(cfg.isActive) {
+        vm.checkAndRescheduleIfOverdue()
+    }
 
     val ringtoneLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -113,10 +130,18 @@ fun HomeScreen(vm: AlarmViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         Text(if (cfg.isActive) stringResource(R.string.status_active) else stringResource(R.string.status_inactive), style = titleStyle)
                         if (cfg.isActive) {
                             Text(stringResource(R.string.running_range, fmtTime(cfg.startHour, cfg.startMinute), fmtTime(cfg.endHour, cfg.endMinute)), style = bodyStyle)
+                            Text(
+                                AlarmScheduler.formatNextTrigger(ctx, cfg.nextTriggerMillis, currentTime),
+                                style = bodyStyle.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
                     }
                     Row(
@@ -141,146 +166,255 @@ fun HomeScreen(vm: AlarmViewModel) {
                 }
             }
 
-            // Time Window Section
-            Text(
-                stringResource(R.string.time_window),
-                style = sectionHeaderStyle,
-                modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
-            )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TimePickerCard(
-                    label = stringResource(R.string.label_start),
-                    hour = cfg.startHour, minute = cfg.startMinute,
-                    enabled = !cfg.isActive, textStyle = largeStyle, labelStyle = labelStyle,
-                    onPick = { h, m -> vm.updateConfig { copy(startHour = h, startMinute = m) } },
-                    modifier = Modifier.weight(1f)
+            if (cfg.isActive) {
+                // When active: Alerts section is always visible and editable
+                AlertsSection(
+                    cfg = cfg, vm = vm,
+                    headerStyle = sectionHeaderStyle, bodyStyle = bodyStyle, scaleFactor = scaleFactor,
+                    topPadding = sectionTopPadding, bottomPadding = sectionBottomPadding
                 )
-                TimePickerCard(
-                    label = stringResource(R.string.label_end),
-                    hour = cfg.endHour, minute = cfg.endMinute,
-                    enabled = !cfg.isActive, textStyle = largeStyle, labelStyle = labelStyle,
-                    onPick = { h, m -> vm.updateConfig { copy(endHour = h, endMinute = m) } },
-                    modifier = Modifier.weight(1f)
-                )
-            }
 
-            // Time Alone Section
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = sectionTopPadding, bottom = sectionBottomPadding),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    stringResource(R.string.label_time_alone),
-                    style = sectionHeaderStyle,
-                    modifier = Modifier.weight(1.5f)
-                )
-                Text(
-                    stringResource(R.string.label_adjustment),
-                    style = sectionHeaderStyle,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DurationPickerCard(
-                    seconds = cfg.timeAloneSeconds, enabled = !cfg.isActive, textStyle = largeStyle,
-                    onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } },
-                    modifier = Modifier.weight(1.5f)
-                )
-                IntervalField(
-                    label = "%", configValue = cfg.adjustmentPercent, enabled = !cfg.isActive, textStyle = bodyStyle, labelStyle = labelStyle,
-                    onCommit = { v -> vm.updateConfig { copy(adjustmentPercent = v.coerceIn(1, 100)) } },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            // Interval Range Section
-            Text(
-                stringResource(R.string.interval_range),
-                style = sectionHeaderStyle,
-                modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
-            )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IntervalField(
-                    label = "Min Int", configValue = cfg.minIntervalMin, enabled = !cfg.isActive, textStyle = bodyStyle, labelStyle = labelStyle,
-                    onCommit = { v -> vm.updateConfig { copy(minIntervalMin = v.coerceIn(1, cfg.maxIntervalMin)) } },
-                    modifier = Modifier.weight(1f)
-                )
-                IntervalField(
-                    label = "Max Int", configValue = cfg.maxIntervalMin, enabled = !cfg.isActive, textStyle = bodyStyle, labelStyle = labelStyle,
-                    onCommit = { v -> vm.updateConfig { copy(maxIntervalMin = v.coerceAtLeast(cfg.minIntervalMin)) } },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            // Alerts Section
-            Text(
-                stringResource(R.string.section_alerts),
-                style = sectionHeaderStyle,
-                modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
-            )
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
+                // View Settings / Hide Settings toggle button
+                OutlinedButton(
+                    onClick = { showSettings = !showSettings },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = (4.dp * scaleFactor).coerceIn(2.dp, 8.dp)),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                        .padding(top = sectionTopPadding, bottom = sectionBottomPadding)
                 ) {
-                    ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(soundEnabled = it) } }
-                    ToggleRow(stringResource(R.string.alert_vibration), cfg.vibrationEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(vibrationEnabled = it) } }
+                    Icon(
+                        imageVector = if (showSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        stringResource(if (showSettings) R.string.btn_hide_settings else R.string.btn_view_settings),
+                        fontSize = bodyStyle.fontSize
+                    )
                 }
-            }
 
-            // Almost Done Alert Section
-            Text(
-                stringResource(R.string.section_almost_done),
-                style = sectionHeaderStyle,
-                modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
-            )
-            AlmostDonePickerCard(
-                seconds = cfg.almostDoneSeconds,
-                enabled = !cfg.isActive,
-                textStyle = largeStyle,
-                onPick = { vm.updateConfig { copy(almostDoneSeconds = it) } }
-            )
+                if (showSettings) {
+                    TimeWindowSection(cfg, vm, false, sectionHeaderStyle, largeStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                    TimeAloneSection(cfg, vm, false, sectionHeaderStyle, largeStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                    IntervalRangeSection(cfg, vm, false, sectionHeaderStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                    AlmostDoneSection(cfg, vm, false, sectionHeaderStyle, largeStyle, sectionTopPadding, sectionBottomPadding)
+                    RepeatDaysSection(cfg, vm, false, sectionHeaderStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                }
+            } else {
+                TimeWindowSection(cfg, vm, true, sectionHeaderStyle, largeStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                TimeAloneSection(cfg, vm, true, sectionHeaderStyle, largeStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                IntervalRangeSection(cfg, vm, true, sectionHeaderStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                AlertsSection(cfg, vm, sectionHeaderStyle, bodyStyle, scaleFactor, sectionTopPadding, sectionBottomPadding)
+                AlmostDoneSection(cfg, vm, true, sectionHeaderStyle, largeStyle, sectionTopPadding, sectionBottomPadding)
+                RepeatDaysSection(cfg, vm, true, sectionHeaderStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
 
-            // Repeat Days Section
-            Text(
-                stringResource(R.string.section_repeat),
-                style = sectionHeaderStyle,
-                modifier = Modifier.padding(top = sectionTopPadding, bottom = sectionBottomPadding)
-            )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                for (dow in DayOfWeek.entries) {
-                    val selected = cfg.repeatDays.contains(dow.value)
-                    FilterChip(
-                        selected = selected, enabled = !cfg.isActive,
-                        onClick = {
-                            val newDays = if (selected) cfg.repeatDays - dow.value else cfg.repeatDays + dow.value
-                            vm.updateConfig { copy(repeatDays = newDays) }
-                        },
-                        label = { Text(dow.getDisplayName(TextStyle.NARROW, Locale.getDefault()), fontSize = labelStyle.fontSize) },
-                        modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.extraSmall
+                if (cfg.windowMinutes < cfg.minIntervalMin) {
+                    Text(
+                        stringResource(R.string.warning_window_too_small),
+                        color = MaterialTheme.colorScheme.error,
+                        style = bodyStyle,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
             }
 
-            if (cfg.windowMinutes < cfg.minIntervalMin) {
-                Text(
-                    stringResource(R.string.warning_window_too_small),
-                    color = MaterialTheme.colorScheme.error,
-                    style = bodyStyle,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+// ── Sections ─────────────────────────────────────────────
+
+@Composable
+private fun TimeWindowSection(
+    cfg: com.example.intervalalarm.model.AlarmConfig,
+    vm: AlarmViewModel,
+    enabled: Boolean,
+    headerStyle: androidx.compose.ui.text.TextStyle,
+    largeStyle: androidx.compose.ui.text.TextStyle,
+    labelStyle: androidx.compose.ui.text.TextStyle,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    Text(
+        stringResource(R.string.time_window),
+        style = headerStyle,
+        modifier = Modifier.padding(top = topPadding, bottom = bottomPadding)
+    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TimePickerCard(
+            label = stringResource(R.string.label_start),
+            hour = cfg.startHour, minute = cfg.startMinute,
+            enabled = enabled, textStyle = largeStyle, labelStyle = labelStyle,
+            onPick = { h, m -> vm.updateConfig { copy(startHour = h, startMinute = m) } },
+            modifier = Modifier.weight(1f)
+        )
+        TimePickerCard(
+            label = stringResource(R.string.label_end),
+            hour = cfg.endHour, minute = cfg.endMinute,
+            enabled = enabled, textStyle = largeStyle, labelStyle = labelStyle,
+            onPick = { h, m -> vm.updateConfig { copy(endHour = h, endMinute = m) } },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun TimeAloneSection(
+    cfg: com.example.intervalalarm.model.AlarmConfig,
+    vm: AlarmViewModel,
+    enabled: Boolean,
+    headerStyle: androidx.compose.ui.text.TextStyle,
+    largeStyle: androidx.compose.ui.text.TextStyle,
+    bodyStyle: androidx.compose.ui.text.TextStyle,
+    labelStyle: androidx.compose.ui.text.TextStyle,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = topPadding, bottom = bottomPadding),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            stringResource(R.string.label_time_alone),
+            style = headerStyle,
+            modifier = Modifier.weight(1.5f)
+        )
+        Text(
+            stringResource(R.string.label_adjustment),
+            style = headerStyle,
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        DurationPickerCard(
+            seconds = cfg.timeAloneSeconds, enabled = enabled, textStyle = largeStyle,
+            onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } },
+            modifier = Modifier.weight(1.5f)
+        )
+        IntervalField(
+            label = "%", configValue = cfg.adjustmentPercent, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
+            onCommit = { v -> vm.updateConfig { copy(adjustmentPercent = v.coerceIn(1, 100)) } },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun IntervalRangeSection(
+    cfg: com.example.intervalalarm.model.AlarmConfig,
+    vm: AlarmViewModel,
+    enabled: Boolean,
+    headerStyle: androidx.compose.ui.text.TextStyle,
+    bodyStyle: androidx.compose.ui.text.TextStyle,
+    labelStyle: androidx.compose.ui.text.TextStyle,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    Text(
+        stringResource(R.string.interval_range),
+        style = headerStyle,
+        modifier = Modifier.padding(top = topPadding, bottom = bottomPadding)
+    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        IntervalField(
+            label = "Min Int", configValue = cfg.minIntervalMin, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
+            onCommit = { v -> vm.updateConfig { copy(minIntervalMin = v.coerceIn(1, cfg.maxIntervalMin)) } },
+            modifier = Modifier.weight(1f)
+        )
+        IntervalField(
+            label = "Max Int", configValue = cfg.maxIntervalMin, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
+            onCommit = { v -> vm.updateConfig { copy(maxIntervalMin = v.coerceAtLeast(cfg.minIntervalMin)) } },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun AlertsSection(
+    cfg: com.example.intervalalarm.model.AlarmConfig,
+    vm: AlarmViewModel,
+    headerStyle: androidx.compose.ui.text.TextStyle,
+    bodyStyle: androidx.compose.ui.text.TextStyle,
+    scaleFactor: Float,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    Text(
+        stringResource(R.string.section_alerts),
+        style = headerStyle,
+        modifier = Modifier.padding(top = topPadding, bottom = bottomPadding)
+    )
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = (4.dp * scaleFactor).coerceIn(2.dp, 8.dp)),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(soundEnabled = it) } }
+            ToggleRow(stringResource(R.string.alert_vibration), cfg.vibrationEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(vibrationEnabled = it) } }
+        }
+    }
+}
+
+@Composable
+private fun AlmostDoneSection(
+    cfg: com.example.intervalalarm.model.AlarmConfig,
+    vm: AlarmViewModel,
+    enabled: Boolean,
+    headerStyle: androidx.compose.ui.text.TextStyle,
+    largeStyle: androidx.compose.ui.text.TextStyle,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    Text(
+        stringResource(R.string.section_almost_done),
+        style = headerStyle,
+        modifier = Modifier.padding(top = topPadding, bottom = bottomPadding)
+    )
+    AlmostDonePickerCard(
+        seconds = cfg.almostDoneSeconds,
+        enabled = enabled,
+        textStyle = largeStyle,
+        onPick = { vm.updateConfig { copy(almostDoneSeconds = it) } }
+    )
+}
+
+@Composable
+private fun RepeatDaysSection(
+    cfg: com.example.intervalalarm.model.AlarmConfig,
+    vm: AlarmViewModel,
+    enabled: Boolean,
+    headerStyle: androidx.compose.ui.text.TextStyle,
+    labelStyle: androidx.compose.ui.text.TextStyle,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    Text(
+        stringResource(R.string.section_repeat),
+        style = headerStyle,
+        modifier = Modifier.padding(top = topPadding, bottom = bottomPadding)
+    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        for (dow in DayOfWeek.entries) {
+            val selected = cfg.repeatDays.contains(dow.value)
+            FilterChip(
+                selected = selected, enabled = enabled,
+                onClick = {
+                    val newDays = if (selected) cfg.repeatDays - dow.value else cfg.repeatDays + dow.value
+                    vm.updateConfig { copy(repeatDays = newDays) }
+                },
+                label = { Text(dow.getDisplayName(TextStyle.NARROW, Locale.getDefault()), fontSize = labelStyle.fontSize) },
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.extraSmall
+            )
         }
     }
 }

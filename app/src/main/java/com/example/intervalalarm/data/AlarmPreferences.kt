@@ -25,6 +25,7 @@ object AlarmPreferences {
     private val TIME_ALONE = longPreferencesKey("time_alone")
     private val ADJUSTMENT_PERCENT = intPreferencesKey("adjustment_percent")
     private val ALMOST_DONE_SECONDS = longPreferencesKey("almost_done_seconds")
+    private val NEXT_TRIGGER_MILLIS = longPreferencesKey("next_trigger_millis")
 
     fun configFlow(ctx: Context): Flow<AlarmConfig> =
         ctx.dataStore.data.map { p ->
@@ -46,7 +47,8 @@ object AlarmPreferences {
                     ?: emptySet(),
                 timeAloneSeconds = p[TIME_ALONE] ?: 60L,
                 adjustmentPercent = p[ADJUSTMENT_PERCENT] ?: 10,
-                almostDoneSeconds = p[ALMOST_DONE_SECONDS] ?: 60L
+                almostDoneSeconds = p[ALMOST_DONE_SECONDS] ?: 60L,
+                nextTriggerMillis = p[NEXT_TRIGGER_MILLIS]?.takeIf { it > 0L }
             )
         }
 
@@ -67,6 +69,11 @@ object AlarmPreferences {
             p[TIME_ALONE] = cfg.timeAloneSeconds
             p[ADJUSTMENT_PERCENT] = cfg.adjustmentPercent
             p[ALMOST_DONE_SECONDS] = cfg.almostDoneSeconds
+            if (cfg.nextTriggerMillis != null && cfg.nextTriggerMillis > 0L) {
+                p[NEXT_TRIGGER_MILLIS] = cfg.nextTriggerMillis
+            } else {
+                p.remove(NEXT_TRIGGER_MILLIS)
+            }
         }
     }
 
@@ -81,6 +88,21 @@ object AlarmPreferences {
     }
 
     suspend fun setActive(ctx: Context, active: Boolean) {
-        ctx.dataStore.edit { it[IS_ACTIVE] = active }
+        ctx.dataStore.edit {
+            it[IS_ACTIVE] = active
+            if (!active) {
+                it.remove(NEXT_TRIGGER_MILLIS)
+            }
+        }
+    }
+
+    suspend fun setNextTriggerMillis(ctx: Context, millis: Long?) {
+        ctx.dataStore.edit { p ->
+            if (millis != null && millis > 0L) {
+                p[NEXT_TRIGGER_MILLIS] = millis
+            } else {
+                p.remove(NEXT_TRIGGER_MILLIS)
+            }
+        }
     }
 }

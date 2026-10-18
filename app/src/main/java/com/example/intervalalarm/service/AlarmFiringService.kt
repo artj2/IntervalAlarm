@@ -73,6 +73,7 @@ class AlarmFiringService : Service() {
                     stopSelf()
                     return@launch
                 }
+                AlarmPreferences.setNextTriggerMillis(this@AlarmFiringService, null)
 
                 currentHistoryId = AlarmHistoryDatabase.get(this@AlarmFiringService).dao()
                     .insert(AlarmHistoryEntry(status = "FIRED", initialTimeAloneSeconds = cfg.timeAloneSeconds))
