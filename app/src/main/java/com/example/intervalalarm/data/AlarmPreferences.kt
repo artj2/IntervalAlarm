@@ -77,13 +77,16 @@ object AlarmPreferences {
         }
     }
 
+    fun calculateAdjustedTimeAlone(currentSeconds: Long, adjustmentPercent: Int, isSuccess: Boolean): Long {
+        val delta = maxOf(1L, Math.round(currentSeconds * (adjustmentPercent / 100.0)))
+        return (if (isSuccess) currentSeconds + delta else currentSeconds - delta).coerceIn(1L, 14400L)
+    }
+
     suspend fun updateTimeAlone(ctx: Context, isSuccess: Boolean) {
         ctx.dataStore.edit { p ->
             val current = p[TIME_ALONE] ?: 60L
             val pct = p[ADJUSTMENT_PERCENT] ?: 10
-            val multiplier = if (isSuccess) 1.0 + (pct / 100.0) else 1.0 - (pct / 100.0)
-            val newVal = (current * multiplier).toLong().coerceIn(1L, 14400L)
-            p[TIME_ALONE] = newVal
+            p[TIME_ALONE] = calculateAdjustedTimeAlone(current, pct, isSuccess)
         }
     }
 
