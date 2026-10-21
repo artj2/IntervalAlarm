@@ -15,7 +15,7 @@ The app combines **randomized departure interval alerts** (telling the owner whe
 - **Reliable Alarms**: Scheduled using Android's `AlarmManager.setExactAndAllowWhileIdle` and automatically rescheduled upon device reboot (`BOOT_COMPLETED`).
 - **Next Departure Countdown**: Dedicated prominent section displaying the upcoming departure time and real-time countdown (e.g., `14:35` / `in 42 minutes`) under the status card while the alarm is active.
 - **Clean Active Dashboard**: Automatically hides blocked configuration settings while active to reduce clutter, with an expandable **View Settings** toggle to inspect them read-only.
-- **Custom Alerts**: Configurable alarm ringtone (system ringtone picker) and vibration patterns.
+- **Alert Preferences**: Configurable sound and vibration alerts.
 
 ### 2. ⏳ Adaptive "Time Alone" Training Timer
 - **Trigger Anywhere**: Start an alone-time session on demand with the **Alone T** button, or accept an automated interval departure alarm to seamlessly transition into countdown mode.

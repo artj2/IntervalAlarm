@@ -1,11 +1,6 @@
 package com.example.intervalalarm.ui.screens
 
 import android.content.Intent
-import android.media.RingtoneManager
-import android.net.Uri
-import androidx.core.net.toUri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -51,13 +46,6 @@ fun HomeScreen(vm: AlarmViewModel) {
 
     LaunchedEffect(cfg.isActive) {
         vm.checkAndRescheduleIfOverdue()
-    }
-
-    val ringtoneLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val uri = result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
-        vm.updateConfig { copy(soundUri = uri?.toString()) }
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {

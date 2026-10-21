@@ -16,7 +16,6 @@ import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
-import androidx.core.net.toUri
 import com.example.intervalalarm.IntervalAlarmApp
 import com.example.intervalalarm.MainActivity
 import com.example.intervalalarm.alarm.AlarmScheduler
@@ -85,7 +84,7 @@ class AlarmFiringService : Service() {
                 }
 
                 if (cfg.soundEnabled) {
-                    startSound(cfg.soundUri)
+                    startSound()
                 }
 
                 if (!cfg.soundEnabled && !cfg.vibrationEnabled) {
@@ -165,9 +164,8 @@ class AlarmFiringService : Service() {
         vm.vibrate(combined, attrs)
     }
 
-    private fun startSound(uriStr: String?) {
-        val uri: Uri = uriStr?.toUri()
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+    private fun startSound() {
+        val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
         try {
