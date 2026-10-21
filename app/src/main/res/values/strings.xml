@@ -24,9 +24,6 @@
     <string name="alert_notif">Notification</string>
     <string name="alert_sound">Sound</string>
     <string name="alert_vibration">Vibration</string>
-    <string name="btn_change">Change</string>
-    <string name="sound_custom">Custom</string>
-    <string name="sound_default">Default alarm tone</string>
     <string name="section_repeat">Repeat Days</string>
     <string name="repeat_hint">Leave all unselected for manual start/stop only</string>
     <string name="warning_window_too_small">Warning: minimum interval is longer than the time window</string>
