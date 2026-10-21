@@ -494,6 +494,13 @@ private fun RepeatDaysSection(
             )
         }
     }
+    if (cfg.repeatDays.isEmpty()) {
+        Text(
+            stringResource(R.string.repeat_hint),
+            style = labelStyle.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+            modifier = Modifier.padding(top = 4.dp)
+        )
+    }
 }
 
 // ── Helpers ──────────────────────────────────────────────
