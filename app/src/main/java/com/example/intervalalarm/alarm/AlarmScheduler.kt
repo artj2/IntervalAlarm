@@ -26,18 +26,29 @@ object AlarmScheduler {
         val zone = ZoneId.systemDefault()
         val now = Instant.ofEpochMilli(fromMillis).atZone(zone)
 
-        val intervalMs = Random.nextLong(
-            cfg.minIntervalMin * 60_000L,
-            cfg.maxIntervalMin * 60_000L + 1
-        )
-        val proposedInstant = fromMillis + intervalMs
-        val proposed = Instant.ofEpochMilli(proposedInstant).atZone(zone)
+        val todayDow = now.dayOfWeek.value
+        val isTodayAllowed = cfg.repeatDays.isEmpty() || cfg.repeatDays.contains(todayDow)
 
         val todayStart = now.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
         val todayEnd = now.toLocalDate().atTime(cfg.endHour, cfg.endMinute).atZone(zone)
 
-        if (proposed.isAfter(todayStart) && proposed.isBefore(todayEnd)) {
-            return proposedInstant
+        if (isTodayAllowed) {
+            if (now.isBefore(todayStart)) {
+                return nextWindowStart(cfg, now)
+            }
+
+            if (now.isBefore(todayEnd)) {
+                val intervalMs = Random.nextLong(
+                    cfg.minIntervalMin * 60_000L,
+                    cfg.maxIntervalMin * 60_000L + 1
+                )
+                val proposedInstant = fromMillis + intervalMs
+                val proposed = Instant.ofEpochMilli(proposedInstant).atZone(zone)
+
+                if (proposed.isBefore(todayEnd)) {
+                    return proposedInstant
+                }
+            }
         }
 
         return nextWindowStart(cfg, now)
@@ -47,19 +58,24 @@ object AlarmScheduler {
         val zone = from.zone
         val todayStart = from.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
 
-        if (from.isBefore(todayStart)) {
-            val todayDow = from.dayOfWeek.value
-            if (cfg.repeatDays.isEmpty() || cfg.repeatDays.contains(todayDow)) {
-                val offsetMs = Random.nextLong(0, cfg.minIntervalMin * 60_000L + 1)
-                return todayStart.toInstant().toEpochMilli() + offsetMs
-            }
+        val todayDow = from.dayOfWeek.value
+        val isTodayAllowed = cfg.repeatDays.isEmpty() || cfg.repeatDays.contains(todayDow)
+
+        if (isTodayAllowed && from.isBefore(todayStart)) {
+            val offsetMs = Random.nextLong(0, cfg.minIntervalMin * 60_000L + 1)
+            return todayStart.toInstant().toEpochMilli() + offsetMs
+        }
+
+        // If repeatDays is empty, this is a manual single-day session only; do not roll over to future days.
+        if (cfg.repeatDays.isEmpty()) {
+            return null
         }
 
         // Check subsequent days
         for (d in 1..7) {
             val candidateDate = from.toLocalDate().plusDays(d.toLong())
             val candidateDow = candidateDate.dayOfWeek.value
-            if (cfg.repeatDays.isEmpty() || cfg.repeatDays.contains(candidateDow)) {
+            if (cfg.repeatDays.contains(candidateDow)) {
                 val start = candidateDate.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
                 val offsetMs = Random.nextLong(0, cfg.minIntervalMin * 60_000L + 1)
                 return start.toInstant().toEpochMilli() + offsetMs
@@ -72,6 +88,9 @@ object AlarmScheduler {
     suspend fun schedule(ctx: Context, cfg: AlarmConfig): Long? {
         val triggerAt = nextTriggerTime(cfg) ?: run {
             cancel(ctx)
+            if (cfg.repeatDays.isEmpty()) {
+                AlarmPreferences.setActive(ctx, false)
+            }
             return null
         }
 
