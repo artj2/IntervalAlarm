@@ -156,6 +156,7 @@ class TimerService : Service() {
 
     private fun startDecisionPhase() {
         _isFinished.value = true
+        triggerCompletionAlert()
         val decisionEndTimeRealtime = SystemClock.elapsedRealtime() + 10_000L
         decisionJob?.cancel()
         decisionJob = scope.launch {
@@ -172,6 +173,54 @@ class TimerService : Service() {
             }
             finalActionSuccess()
         }
+    }
+
+    private fun triggerCompletionAlert() {
+        try {
+            val vm = getSystemService(VibratorManager::class.java)
+            vm?.defaultVibrator?.vibrate(
+                VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1)
+            )
+        } catch (_: Exception) {}
+
+        showDecisionNotification()
+    }
+
+    private fun showDecisionNotification() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 3, intent, PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val failIntent = Intent(this, TimerService::class.java).apply {
+            action = ACTION_FAILED
+        }
+        val failPendingIntent = PendingIntent.getService(
+            this, 10, failIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val successIntent = Intent(this, TimerService::class.java).apply {
+            action = ACTION_SUCCESS
+        }
+        val successPendingIntent = PendingIntent.getService(
+            this, 11, successIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notif = NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_TIMER_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(getString(R.string.msg_congrats))
+            .setContentText(getString(R.string.notif_timer_complete_text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .addAction(0, getString(R.string.btn_failed), failPendingIntent)
+            .addAction(0, getString(R.string.btn_success), successPendingIntent)
+            .build()
+
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIF_ID_ALERT, notif)
     }
 
     private fun showCompletionNotification(isSuccess: Boolean) {
