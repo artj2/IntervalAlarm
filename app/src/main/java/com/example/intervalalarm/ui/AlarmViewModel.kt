@@ -44,14 +44,26 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                 if (cfg.windowMinutes < cfg.minIntervalMin) return@launch
                 val zone = java.time.ZoneId.systemDefault()
                 val now = java.time.ZonedDateTime.now(zone)
+                val todayStart = now.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
                 val todayEnd = now.toLocalDate().atTime(cfg.endHour, cfg.endMinute).atZone(zone)
-                if (cfg.repeatDays.isEmpty() && !now.isBefore(todayEnd)) {
+                val minIntervalMs = cfg.minIntervalMin * 60_000L
+                val remainingMsToday = if (now.isBefore(todayStart)) {
+                    java.time.Duration.between(todayStart, todayEnd).toMillis()
+                } else if (now.isBefore(todayEnd)) {
+                    java.time.Duration.between(now, todayEnd).toMillis()
+                } else {
+                    0L
+                }
+
+                if (remainingMsToday < minIntervalMs) {
                     android.widget.Toast.makeText(
                         ctx,
-                        ctx.getString(com.example.intervalalarm.R.string.toast_window_passed),
+                        ctx.getString(com.example.intervalalarm.R.string.msg_not_enough_time_today),
                         android.widget.Toast.LENGTH_SHORT
                     ).show()
-                    return@launch
+                    if (cfg.repeatDays.isEmpty()) {
+                        return@launch
+                    }
                 }
                 AlarmPreferences.setActive(ctx, true)
                 val activeCfg = cfg.copy(isActive = true)

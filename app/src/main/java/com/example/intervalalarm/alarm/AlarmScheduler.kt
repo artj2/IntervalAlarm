@@ -38,12 +38,9 @@ object AlarmScheduler {
             val minIntervalMs = cfg.minIntervalMin * 60_000L
             val maxIntervalMs = cfg.maxIntervalMin * 60_000L
 
-            if (remainingMs > 30_000L) {
-                val intervalMs = if (remainingMs >= minIntervalMs) {
-                    Random.nextLong(minIntervalMs, minOf(maxIntervalMs, remainingMs) + 1)
-                } else {
-                    Random.nextLong(10_000L, remainingMs)
-                }
+            if (remainingMs >= minIntervalMs) {
+                val maxInterval = minOf(maxIntervalMs, remainingMs)
+                val intervalMs = Random.nextLong(minIntervalMs, maxInterval + 1)
                 val proposedInstant = fromMillis + intervalMs
                 if (proposedInstant < todayEnd.toInstant().toEpochMilli()) {
                     return proposedInstant
