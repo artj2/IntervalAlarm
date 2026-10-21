@@ -26,26 +26,26 @@ object AlarmScheduler {
         val zone = ZoneId.systemDefault()
         val now = Instant.ofEpochMilli(fromMillis).atZone(zone)
 
-        val todayDow = now.dayOfWeek.value
-        val isTodayAllowed = cfg.repeatDays.isEmpty() || cfg.repeatDays.contains(todayDow)
-
         val todayStart = now.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
         val todayEnd = now.toLocalDate().atTime(cfg.endHour, cfg.endMinute).atZone(zone)
 
-        if (isTodayAllowed) {
-            if (now.isBefore(todayStart)) {
-                return nextWindowStart(cfg, now)
-            }
+        if (now.isBefore(todayStart)) {
+            return nextWindowStart(cfg, now)
+        }
 
-            if (now.isBefore(todayEnd)) {
-                val intervalMs = Random.nextLong(
-                    cfg.minIntervalMin * 60_000L,
-                    cfg.maxIntervalMin * 60_000L + 1
-                )
+        if (now.isBefore(todayEnd)) {
+            val remainingMs = todayEnd.toInstant().toEpochMilli() - fromMillis
+            val minIntervalMs = cfg.minIntervalMin * 60_000L
+            val maxIntervalMs = cfg.maxIntervalMin * 60_000L
+
+            if (remainingMs > 30_000L) {
+                val intervalMs = if (remainingMs >= minIntervalMs) {
+                    Random.nextLong(minIntervalMs, minOf(maxIntervalMs, remainingMs) + 1)
+                } else {
+                    Random.nextLong(10_000L, remainingMs)
+                }
                 val proposedInstant = fromMillis + intervalMs
-                val proposed = Instant.ofEpochMilli(proposedInstant).atZone(zone)
-
-                if (proposed.isBefore(todayEnd)) {
+                if (proposedInstant < todayEnd.toInstant().toEpochMilli()) {
                     return proposedInstant
                 }
             }
@@ -58,10 +58,7 @@ object AlarmScheduler {
         val zone = from.zone
         val todayStart = from.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
 
-        val todayDow = from.dayOfWeek.value
-        val isTodayAllowed = cfg.repeatDays.isEmpty() || cfg.repeatDays.contains(todayDow)
-
-        if (isTodayAllowed && from.isBefore(todayStart)) {
+        if (from.isBefore(todayStart)) {
             val offsetMs = Random.nextLong(0, cfg.minIntervalMin * 60_000L + 1)
             return todayStart.toInstant().toEpochMilli() + offsetMs
         }

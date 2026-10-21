@@ -42,6 +42,17 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                 AlarmPreferences.setActive(ctx, false)
             } else {
                 if (cfg.windowMinutes < cfg.minIntervalMin) return@launch
+                val zone = java.time.ZoneId.systemDefault()
+                val now = java.time.ZonedDateTime.now(zone)
+                val todayEnd = now.toLocalDate().atTime(cfg.endHour, cfg.endMinute).atZone(zone)
+                if (cfg.repeatDays.isEmpty() && !now.isBefore(todayEnd)) {
+                    android.widget.Toast.makeText(
+                        ctx,
+                        ctx.getString(com.example.intervalalarm.R.string.toast_window_passed),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
+                }
                 AlarmPreferences.setActive(ctx, true)
                 val activeCfg = cfg.copy(isActive = true)
                 AlarmScheduler.schedule(ctx, activeCfg)
