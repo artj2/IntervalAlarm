@@ -263,8 +263,7 @@ class AlarmFiringService : Service() {
     private suspend fun updateHistory(status: String) {
         if (currentHistoryId == -1L) return
         val db = AlarmHistoryDatabase.get(this)
-        val entry = AlarmHistoryEntry(id = currentHistoryId, status = status)
-        db.dao().update(entry)
+        db.dao().updateStatus(currentHistoryId, status)
     }
 
     override fun onDestroy() {

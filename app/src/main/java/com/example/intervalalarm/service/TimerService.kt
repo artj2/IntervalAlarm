@@ -321,13 +321,7 @@ class TimerService : Service() {
     private suspend fun updateHistory(status: String, elapsed: Long) {
         if (currentHistoryId == -1L) return
         val db = AlarmHistoryDatabase.get(this)
-        val entry = AlarmHistoryEntry(
-            id = currentHistoryId,
-            status = status,
-            initialTimeAloneSeconds = _initialSeconds.value,
-            elapsedTimeSeconds = elapsed
-        )
-        db.dao().update(entry)
+        db.dao().updateOutcome(currentHistoryId, status, elapsed)
     }
 
     override fun onDestroy() {

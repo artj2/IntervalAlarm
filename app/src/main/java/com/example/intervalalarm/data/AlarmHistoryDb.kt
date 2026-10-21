@@ -25,6 +25,12 @@ interface AlarmHistoryDao {
     @Update
     suspend fun update(entry: AlarmHistoryEntry)
 
+    @Query("UPDATE alarm_history SET status = :status WHERE id = :id")
+    suspend fun updateStatus(id: Long, status: String)
+
+    @Query("UPDATE alarm_history SET status = :status, elapsedTimeSeconds = :elapsedTimeSeconds WHERE id = :id")
+    suspend fun updateOutcome(id: Long, status: String, elapsedTimeSeconds: Long)
+
     @Query("DELETE FROM alarm_history")
     suspend fun clearAll()
 }
