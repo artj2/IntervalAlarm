@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
@@ -40,7 +41,7 @@ class TimerService : Service() {
                 val initialSeconds = intent.getLongExtra(EXTRA_SECONDS, 60L)
                 val historyId = intent.getLongExtra(EXTRA_HISTORY_ID, -1L)
                 val almostDoneSeconds = intent.getLongExtra(EXTRA_ALMOST_DONE_SECONDS, 60L)
-                acquireWakeLock()
+                acquireWakeLock(initialSeconds)
                 startTimer(initialSeconds, historyId, almostDoneSeconds)
             }
             ACTION_FAILED -> {
@@ -57,17 +58,24 @@ class TimerService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun acquireWakeLock() {
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "IntervalAlarm:TimerWakeLock").apply {
-            acquire(3600_000L) // 1 hour max
-        }
+    private fun acquireWakeLock(durationSeconds: Long) {
+        releaseWakeLock()
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val timeoutMs = (durationSeconds + 60L) * 1000L
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "IntervalAlarm:TimerWakeLock").apply {
+                setReferenceCounted(false)
+                acquire(timeoutMs)
+            }
+        } catch (_: Exception) {}
     }
 
     private fun releaseWakeLock() {
-        if (wakeLock?.isHeld == true) {
-            wakeLock?.release()
-        }
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+        } catch (_: Exception) {}
         wakeLock = null
     }
 
@@ -86,21 +94,33 @@ class TimerService : Service() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         )
 
+        val endTimeRealtime = SystemClock.elapsedRealtime() + seconds * 1000L
+
         timerJob?.cancel()
         timerJob = scope.launch {
-            while (_remainingSeconds.value > 0) {
-                delay(1000)
-                _remainingSeconds.value -= 1
-                updateNotification(_remainingSeconds.value)
-
-                if (!almostDoneAlertShown &&
-                    almostDoneThresholdSeconds > 0 &&
-                    _initialSeconds.value > almostDoneThresholdSeconds &&
-                    _remainingSeconds.value <= almostDoneThresholdSeconds
-                ) {
-                    almostDoneAlertShown = true
-                    showAlmostDoneNotification()
+            while (true) {
+                val remainingMs = endTimeRealtime - SystemClock.elapsedRealtime()
+                if (remainingMs <= 0L) {
+                    _remainingSeconds.value = 0L
+                    updateNotification(0L)
+                    break
                 }
+                val remainingSec = (remainingMs + 999L) / 1000L
+                if (_remainingSeconds.value != remainingSec) {
+                    _remainingSeconds.value = remainingSec
+                    updateNotification(remainingSec)
+
+                    if (!almostDoneAlertShown &&
+                        almostDoneThresholdSeconds > 0 &&
+                        _initialSeconds.value > almostDoneThresholdSeconds &&
+                        remainingSec <= almostDoneThresholdSeconds
+                    ) {
+                        almostDoneAlertShown = true
+                        showAlmostDoneNotification()
+                    }
+                }
+                val delayTime = (remainingMs % 1000L).let { if (it == 0L) 1000L else it }
+                delay(delayTime.coerceIn(100L, 1000L))
             }
             startDecisionPhase()
         }
@@ -136,11 +156,19 @@ class TimerService : Service() {
 
     private fun startDecisionPhase() {
         _isFinished.value = true
+        val decisionEndTimeRealtime = SystemClock.elapsedRealtime() + 10_000L
         decisionJob?.cancel()
         decisionJob = scope.launch {
-            while (_decisionTimerSeconds.value > 0) {
-                delay(1000)
-                _decisionTimerSeconds.value -= 1
+            while (true) {
+                val remainingMs = decisionEndTimeRealtime - SystemClock.elapsedRealtime()
+                if (remainingMs <= 0L) {
+                    _decisionTimerSeconds.value = 0
+                    break
+                }
+                val sec = ((remainingMs + 999L) / 1000L).toInt()
+                _decisionTimerSeconds.value = sec
+                val delayTime = (remainingMs % 1000L).let { if (it == 0L) 1000L else it }
+                delay(delayTime.coerceIn(100L, 1000L))
             }
             finalActionSuccess()
         }
