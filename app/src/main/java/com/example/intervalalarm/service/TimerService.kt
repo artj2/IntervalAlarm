@@ -19,6 +19,7 @@ import com.example.intervalalarm.alarm.AlarmScheduler
 import com.example.intervalalarm.data.AlarmHistoryDatabase
 import com.example.intervalalarm.data.AlarmHistoryEntry
 import com.example.intervalalarm.data.AlarmPreferences
+import com.example.intervalalarm.data.PersistedTimerSession
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,8 +55,16 @@ class TimerService : Service() {
             ACTION_SUCCESS -> {
                 finalActionSuccess()
             }
+            null -> {
+                startForeground(
+                    NOTIF_ID,
+                    buildNotification(_remainingSeconds.value),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+                restoreSession()
+            }
         }
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     private fun acquireWakeLock(durationSeconds: Long) {
@@ -94,8 +103,68 @@ class TimerService : Service() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         )
 
-        val endTimeRealtime = SystemClock.elapsedRealtime() + seconds * 1000L
+        val endEpochMillis = System.currentTimeMillis() + seconds * 1000L
+        scope.launch {
+            AlarmPreferences.saveTimerSession(
+                this@TimerService,
+                PersistedTimerSession(
+                    endEpochMillis = endEpochMillis,
+                    initialSeconds = seconds,
+                    historyId = historyId,
+                    almostDoneSeconds = almostDoneSeconds,
+                    almostDoneShown = false,
+                    decisionEndEpochMillis = 0L
+                )
+            )
+        }
 
+        val endTimeRealtime = SystemClock.elapsedRealtime() + seconds * 1000L
+        runCountdownLoop(endTimeRealtime)
+    }
+
+    private fun restoreSession() {
+        scope.launch {
+            val session = AlarmPreferences.getTimerSession(this@TimerService)
+            if (session == null) {
+                stopSelf()
+                return@launch
+            }
+
+            _initialSeconds.value = session.initialSeconds
+            currentHistoryId = session.historyId
+            almostDoneThresholdSeconds = session.almostDoneSeconds
+            almostDoneAlertShown = session.almostDoneShown
+
+            val now = System.currentTimeMillis()
+            val remainingMs = session.endEpochMillis - now
+            if (remainingMs > 0L) {
+                val remainingSec = (remainingMs + 999L) / 1000L
+                _remainingSeconds.value = remainingSec
+                _isFinished.value = false
+                if (almostDoneThresholdSeconds > 0 && remainingSec <= almostDoneThresholdSeconds) {
+                    almostDoneAlertShown = true
+                }
+                acquireWakeLock(remainingSec)
+                updateNotification(remainingSec)
+                runCountdownLoop(SystemClock.elapsedRealtime() + remainingMs)
+            } else {
+                _remainingSeconds.value = 0L
+                updateNotification(0L)
+                if (session.decisionEndEpochMillis == 0L) {
+                    startDecisionPhase(durationMs = 10_000L, triggerAlert = true)
+                } else {
+                    val decisionRemMs = session.decisionEndEpochMillis - now
+                    if (decisionRemMs > 0L) {
+                        startDecisionPhase(durationMs = decisionRemMs, triggerAlert = false)
+                    } else {
+                        finalActionSuccess()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun runCountdownLoop(endTimeRealtime: Long) {
         timerJob?.cancel()
         timerJob = scope.launch {
             while (true) {
@@ -116,13 +185,14 @@ class TimerService : Service() {
                         remainingSec <= almostDoneThresholdSeconds
                     ) {
                         almostDoneAlertShown = true
+                        AlarmPreferences.updateTimerSessionAlmostDoneShown(this@TimerService, true)
                         showAlmostDoneNotification()
                     }
                 }
                 val delayTime = (remainingMs % 1000L).let { if (it == 0L) 1000L else it }
                 delay(delayTime.coerceIn(100L, 1000L))
             }
-            startDecisionPhase()
+            startDecisionPhase(durationMs = 10_000L, triggerAlert = true)
         }
     }
 
@@ -154,10 +224,18 @@ class TimerService : Service() {
         } catch (_: Exception) {}
     }
 
-    private fun startDecisionPhase() {
+    private fun startDecisionPhase(durationMs: Long = 10_000L, triggerAlert: Boolean = true) {
         _isFinished.value = true
-        triggerCompletionAlert()
-        val decisionEndTimeRealtime = SystemClock.elapsedRealtime() + 10_000L
+        if (triggerAlert) {
+            triggerCompletionAlert()
+            val decisionEndEpoch = System.currentTimeMillis() + durationMs
+            scope.launch {
+                AlarmPreferences.updateTimerSessionDecisionEnd(this@TimerService, decisionEndEpoch)
+            }
+        } else {
+            showDecisionNotification()
+        }
+        val decisionEndTimeRealtime = SystemClock.elapsedRealtime() + durationMs
         decisionJob?.cancel()
         decisionJob = scope.launch {
             while (true) {
@@ -247,12 +325,24 @@ class TimerService : Service() {
         nm.notify(NOTIF_ID_ALERT, notif)
     }
 
+    private suspend fun ensureSessionLoaded() {
+        if (currentHistoryId == -1L || _initialSeconds.value <= 0L) {
+            val session = AlarmPreferences.getTimerSession(this@TimerService)
+            if (session != null) {
+                if (currentHistoryId == -1L) currentHistoryId = session.historyId
+                if (_initialSeconds.value <= 0L) _initialSeconds.value = session.initialSeconds
+            }
+        }
+    }
+
     private fun finalActionSuccess() {
         decisionJob?.cancel()
         releaseWakeLock()
         scope.launch {
+            ensureSessionLoaded()
             updateHistory("SUCCESS", _initialSeconds.value)
             AlarmPreferences.updateTimeAlone(this@TimerService, true)
+            AlarmPreferences.clearTimerSession(this@TimerService)
             resumeIntervals()
             showCompletionNotification(true)
             stopSelf()
@@ -263,8 +353,10 @@ class TimerService : Service() {
         decisionJob?.cancel()
         releaseWakeLock()
         scope.launch {
+            ensureSessionLoaded()
             updateHistory("FAILED", _initialSeconds.value)
             AlarmPreferences.updateTimeAlone(this@TimerService, false)
+            AlarmPreferences.clearTimerSession(this@TimerService)
             resumeIntervals()
             showCompletionNotification(false)
             stopSelf()
@@ -274,10 +366,12 @@ class TimerService : Service() {
     private fun failTimerEarly() {
         timerJob?.cancel()
         releaseWakeLock()
-        val elapsed = _initialSeconds.value - _remainingSeconds.value
+        val elapsed = (_initialSeconds.value - _remainingSeconds.value).coerceAtLeast(0L)
         scope.launch {
+            ensureSessionLoaded()
             updateHistory("FAILED", elapsed)
             AlarmPreferences.updateTimeAlone(this@TimerService, false)
+            AlarmPreferences.clearTimerSession(this@TimerService)
             resumeIntervals()
             stopSelf()
         }
