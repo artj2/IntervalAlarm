@@ -5,9 +5,19 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.intervalalarm.model.AlarmConfig
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "alarm_prefs")
+
+data class PersistedTimerSession(
+    val endEpochMillis: Long,
+    val initialSeconds: Long,
+    val historyId: Long,
+    val almostDoneSeconds: Long,
+    val almostDoneShown: Boolean = false,
+    val decisionEndEpochMillis: Long = 0L
+)
 
 object AlarmPreferences {
 
@@ -27,6 +37,13 @@ object AlarmPreferences {
     private val ADJUSTMENT_PERCENT = intPreferencesKey("adjustment_percent")
     private val ALMOST_DONE_SECONDS = longPreferencesKey("almost_done_seconds")
     private val NEXT_TRIGGER_MILLIS = longPreferencesKey("next_trigger_millis")
+
+    private val SESSION_END_EPOCH = longPreferencesKey("session_end_epoch")
+    private val SESSION_INITIAL_SEC = longPreferencesKey("session_initial_sec")
+    private val SESSION_HISTORY_ID = longPreferencesKey("session_history_id")
+    private val SESSION_ALMOST_DONE_SEC = longPreferencesKey("session_almost_done_sec")
+    private val SESSION_ALMOST_DONE_SHOWN = booleanPreferencesKey("session_almost_done_shown")
+    private val SESSION_DECISION_END_EPOCH = longPreferencesKey("session_decision_end_epoch")
 
     private fun fromPreferences(p: Preferences): AlarmConfig =
         AlarmConfig(
@@ -123,6 +140,58 @@ object AlarmPreferences {
             } else {
                 p.remove(NEXT_TRIGGER_MILLIS)
             }
+        }
+    }
+
+    suspend fun saveTimerSession(ctx: Context, session: PersistedTimerSession) {
+        ctx.dataStore.edit { p ->
+            p[SESSION_END_EPOCH] = session.endEpochMillis
+            p[SESSION_INITIAL_SEC] = session.initialSeconds
+            p[SESSION_HISTORY_ID] = session.historyId
+            p[SESSION_ALMOST_DONE_SEC] = session.almostDoneSeconds
+            p[SESSION_ALMOST_DONE_SHOWN] = session.almostDoneShown
+            p[SESSION_DECISION_END_EPOCH] = session.decisionEndEpochMillis
+        }
+    }
+
+    suspend fun updateTimerSessionAlmostDoneShown(ctx: Context, shown: Boolean) {
+        ctx.dataStore.edit { p ->
+            if (p.contains(SESSION_END_EPOCH)) {
+                p[SESSION_ALMOST_DONE_SHOWN] = shown
+            }
+        }
+    }
+
+    suspend fun updateTimerSessionDecisionEnd(ctx: Context, decisionEndEpochMillis: Long) {
+        ctx.dataStore.edit { p ->
+            if (p.contains(SESSION_END_EPOCH)) {
+                p[SESSION_DECISION_END_EPOCH] = decisionEndEpochMillis
+            }
+        }
+    }
+
+    suspend fun getTimerSession(ctx: Context): PersistedTimerSession? {
+        val p = ctx.dataStore.data.first()
+        val endEpoch = p[SESSION_END_EPOCH] ?: return null
+        if (endEpoch <= 0L) return null
+        return PersistedTimerSession(
+            endEpochMillis = endEpoch,
+            initialSeconds = p[SESSION_INITIAL_SEC] ?: 60L,
+            historyId = p[SESSION_HISTORY_ID] ?: -1L,
+            almostDoneSeconds = p[SESSION_ALMOST_DONE_SEC] ?: 60L,
+            almostDoneShown = p[SESSION_ALMOST_DONE_SHOWN] ?: false,
+            decisionEndEpochMillis = p[SESSION_DECISION_END_EPOCH] ?: 0L
+        )
+    }
+
+    suspend fun clearTimerSession(ctx: Context) {
+        ctx.dataStore.edit { p ->
+            p.remove(SESSION_END_EPOCH)
+            p.remove(SESSION_INITIAL_SEC)
+            p.remove(SESSION_HISTORY_ID)
+            p.remove(SESSION_ALMOST_DONE_SEC)
+            p.remove(SESSION_ALMOST_DONE_SHOWN)
+            p.remove(SESSION_DECISION_END_EPOCH)
         }
     }
 }
