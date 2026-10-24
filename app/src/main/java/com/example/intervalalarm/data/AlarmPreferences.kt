@@ -118,11 +118,13 @@ object AlarmPreferences {
         }
     }
 
-    suspend fun setActive(ctx: Context, active: Boolean) {
-        ctx.dataStore.edit {
-            it[IS_ACTIVE] = active
-            if (!active) {
-                it.remove(NEXT_TRIGGER_MILLIS)
+    suspend fun setActive(ctx: Context, active: Boolean, nextTriggerMillis: Long? = null) {
+        ctx.dataStore.edit { p ->
+            p[IS_ACTIVE] = active
+            if (active && nextTriggerMillis != null && nextTriggerMillis > 0L) {
+                p[NEXT_TRIGGER_MILLIS] = nextTriggerMillis
+            } else {
+                p.remove(NEXT_TRIGGER_MILLIS)
             }
         }
     }
