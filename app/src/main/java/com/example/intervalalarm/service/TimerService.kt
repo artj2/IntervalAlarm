@@ -24,6 +24,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import java.util.concurrent.atomic.AtomicBoolean
 
 class TimerService : Service() {
 
@@ -33,6 +34,7 @@ class TimerService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var almostDoneAlertShown = false
     private var almostDoneThresholdSeconds: Long = 0L
+    private val outcomeHandled = AtomicBoolean(false)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -67,6 +69,7 @@ class TimerService : Service() {
         return START_STICKY
     }
 
+    @Synchronized
     private fun acquireWakeLock(durationSeconds: Long) {
         releaseWakeLock()
         try {
@@ -79,6 +82,7 @@ class TimerService : Service() {
         } catch (_: Exception) {}
     }
 
+    @Synchronized
     private fun releaseWakeLock() {
         try {
             if (wakeLock?.isHeld == true) {
@@ -89,6 +93,7 @@ class TimerService : Service() {
     }
 
     private fun startTimer(seconds: Long, historyId: Long, almostDoneSeconds: Long = 60L) {
+        outcomeHandled.set(false)
         _remainingSeconds.value = seconds
         _initialSeconds.value = seconds
         currentHistoryId = historyId
@@ -130,6 +135,7 @@ class TimerService : Service() {
                 return@launch
             }
 
+            outcomeHandled.set(false)
             _initialSeconds.value = session.initialSeconds
             currentHistoryId = session.historyId
             almostDoneThresholdSeconds = session.almostDoneSeconds
@@ -336,6 +342,7 @@ class TimerService : Service() {
     }
 
     private fun finalActionSuccess() {
+        if (!outcomeHandled.compareAndSet(false, true)) return
         decisionJob?.cancel()
         releaseWakeLock()
         scope.launch {
@@ -350,6 +357,7 @@ class TimerService : Service() {
     }
 
     private fun finalActionFailure() {
+        if (!outcomeHandled.compareAndSet(false, true)) return
         decisionJob?.cancel()
         releaseWakeLock()
         scope.launch {
@@ -364,6 +372,7 @@ class TimerService : Service() {
     }
 
     private fun failTimerEarly() {
+        if (!outcomeHandled.compareAndSet(false, true)) return
         timerJob?.cancel()
         releaseWakeLock()
         val elapsed = (_initialSeconds.value - _remainingSeconds.value).coerceAtLeast(0L)
