@@ -114,9 +114,38 @@ fun HomeScreen(vm: AlarmViewModel) {
         }
     }
     var showSettings by remember(cfg.isActive) { mutableStateOf(false) }
+    var pendingStartFields by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
 
     LaunchedEffect(cfg.isActive) {
         vm.checkAndRescheduleIfOverdue()
+    }
+
+    pendingStartFields?.let { (validMin, validMax, validAdj) ->
+        AlertDialog(
+            onDismissRequest = { pendingStartFields = null },
+            title = { Text(stringResource(R.string.dialog_include_today_title)) },
+            text = { Text(stringResource(R.string.dialog_include_today_msg)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingStartFields = null
+                        vm.saveAndToggleActive(validMin, validMax, validAdj, includeTodayOverride = true)
+                    }
+                ) {
+                    Text(stringResource(R.string.btn_include_today))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pendingStartFields = null
+                        vm.saveAndToggleActive(validMin, validMax, validAdj, includeTodayOverride = false)
+                    }
+                ) {
+                    Text(stringResource(R.string.btn_repeat_days_only))
+                }
+            }
+        )
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -230,6 +259,26 @@ fun HomeScreen(vm: AlarmViewModel) {
                             onClick = {
                                 val (validMin, validMax, validAdj) = resolveValidatedFields()
                                 focusManager.clearFocus()
+                                if (!cfg.isActive && cfg.repeatDays.isNotEmpty()) {
+                                    val zone = java.time.ZoneId.systemDefault()
+                                    val now = java.time.ZonedDateTime.now(zone)
+                                    val today = now.toLocalDate()
+                                    if (!cfg.repeatDays.contains(today.dayOfWeek.value) && cfg.windowMinutes >= validMin) {
+                                        val todayStart = today.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+                                        val todayEnd = today.atTime(cfg.endHour, cfg.endMinute).atZone(zone)
+                                        val remainingMsToday = if (now.isBefore(todayStart)) {
+                                            java.time.Duration.between(todayStart, todayEnd).toMillis()
+                                        } else if (now.isBefore(todayEnd)) {
+                                            java.time.Duration.between(now, todayEnd).toMillis()
+                                        } else {
+                                            0L
+                                        }
+                                        if (remainingMsToday >= validMin * 60_000L) {
+                                            pendingStartFields = Triple(validMin, validMax, validAdj)
+                                            return@FilledTonalButton
+                                        }
+                                    }
+                                }
                                 vm.saveAndToggleActive(validMin, validMax, validAdj)
                             },
                             colors = if (cfg.isActive) {
@@ -255,9 +304,11 @@ fun HomeScreen(vm: AlarmViewModel) {
                     cfg = cfg,
                     nowMillis = currentTime,
                     headerStyle = sectionHeaderStyle,
+                    bodyStyle = bodyStyle,
                     scaleFactor = scaleFactor,
                     topPadding = sectionTopPadding,
-                    bottomPadding = sectionBottomPadding
+                    bottomPadding = sectionBottomPadding,
+                    onStartForToday = { vm.startForToday() }
                 )
 
                 // When active: Alerts section is always visible and editable
@@ -324,13 +375,45 @@ private fun NextAloneTimeSection(
     cfg: com.example.intervalalarm.model.AlarmConfig,
     nowMillis: Long,
     headerStyle: androidx.compose.ui.text.TextStyle,
+    bodyStyle: androidx.compose.ui.text.TextStyle,
     scaleFactor: Float,
     topPadding: androidx.compose.ui.unit.Dp,
-    bottomPadding: androidx.compose.ui.unit.Dp
+    bottomPadding: androidx.compose.ui.unit.Dp,
+    onStartForToday: () -> Unit
 ) {
     val ctx = LocalContext.current
     val display = remember(cfg.nextTriggerMillis, nowMillis) {
         AlarmScheduler.getNextTriggerDisplay(ctx, cfg.nextTriggerMillis, nowMillis)
+    }
+    val canStartForToday = remember(
+        cfg.repeatDays,
+        cfg.overrideTodayDate,
+        cfg.startHour,
+        cfg.startMinute,
+        cfg.endHour,
+        cfg.endMinute,
+        cfg.minIntervalMin,
+        nowMillis
+    ) {
+        if (cfg.repeatDays.isEmpty()) {
+            false
+        } else {
+            val zone = java.time.ZoneId.systemDefault()
+            val now = java.time.Instant.ofEpochMilli(nowMillis).atZone(zone)
+            val today = now.toLocalDate()
+            if (cfg.repeatDays.contains(today.dayOfWeek.value) || cfg.overrideTodayDate == today.toString()) {
+                false
+            } else {
+                val todayStart = today.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+                val todayEnd = today.atTime(cfg.endHour, cfg.endMinute).atZone(zone)
+                if (!now.isBefore(todayStart) && now.isBefore(todayEnd)) {
+                    val remainingMsToday = java.time.Duration.between(now, todayEnd).toMillis()
+                    remainingMsToday >= cfg.minIntervalMin * 60_000L
+                } else {
+                    false
+                }
+            }
+        }
     }
 
     Text(
@@ -370,6 +453,17 @@ private fun NextAloneTimeSection(
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                 )
             }
+        }
+    }
+    if (canStartForToday) {
+        FilledTonalButton(
+            onClick = onStartForToday,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+                .height(44.dp * scaleFactor)
+        ) {
+            Text(stringResource(R.string.btn_start_for_today), fontSize = bodyStyle.fontSize)
         }
     }
 }

@@ -22,28 +22,37 @@ object AlarmScheduler {
 
     private const val REQ_CODE = 1001
 
+    fun isDateAllowed(date: LocalDate, cfg: AlarmConfig): Boolean {
+        return cfg.repeatDays.isEmpty() ||
+            cfg.repeatDays.contains(date.dayOfWeek.value) ||
+            cfg.overrideTodayDate == date.toString()
+    }
+
     fun nextTriggerTime(cfg: AlarmConfig, fromMillis: Long = System.currentTimeMillis()): Long? {
         val zone = ZoneId.systemDefault()
         val now = Instant.ofEpochMilli(fromMillis).atZone(zone)
+        val today = now.toLocalDate()
 
-        val todayStart = now.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
-        val todayEnd = now.toLocalDate().atTime(cfg.endHour, cfg.endMinute).atZone(zone)
+        if (isDateAllowed(today, cfg)) {
+            val todayStart = today.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+            val todayEnd = today.atTime(cfg.endHour, cfg.endMinute).atZone(zone)
 
-        if (now.isBefore(todayStart)) {
-            return nextWindowStart(cfg, now)
-        }
+            if (now.isBefore(todayStart)) {
+                return nextWindowStart(cfg, now)
+            }
 
-        if (now.isBefore(todayEnd)) {
-            val remainingMs = todayEnd.toInstant().toEpochMilli() - fromMillis
-            val minIntervalMs = cfg.minIntervalMin * 60_000L
-            val maxIntervalMs = cfg.maxIntervalMin * 60_000L
+            if (now.isBefore(todayEnd)) {
+                val remainingMs = todayEnd.toInstant().toEpochMilli() - fromMillis
+                val minIntervalMs = cfg.minIntervalMin * 60_000L
+                val maxIntervalMs = cfg.maxIntervalMin * 60_000L
 
-            if (remainingMs >= minIntervalMs) {
-                val maxInterval = minOf(maxIntervalMs, remainingMs)
-                val intervalMs = Random.nextLong(minIntervalMs, maxInterval + 1)
-                val proposedInstant = fromMillis + intervalMs
-                if (proposedInstant < todayEnd.toInstant().toEpochMilli()) {
-                    return proposedInstant
+                if (remainingMs >= minIntervalMs) {
+                    val maxInterval = minOf(maxIntervalMs, remainingMs)
+                    val intervalMs = Random.nextLong(minIntervalMs, maxInterval + 1)
+                    val proposedInstant = fromMillis + intervalMs
+                    if (proposedInstant < todayEnd.toInstant().toEpochMilli()) {
+                        return proposedInstant
+                    }
                 }
             }
         }
@@ -53,10 +62,14 @@ object AlarmScheduler {
 
     fun nextWindowStart(cfg: AlarmConfig, from: ZonedDateTime = ZonedDateTime.now()): Long? {
         val zone = from.zone
-        val todayStart = from.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+        val today = from.toLocalDate()
+        val todayStart = today.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+        val todayEnd = today.atTime(cfg.endHour, cfg.endMinute).atZone(zone)
 
-        if (from.isBefore(todayStart)) {
-            val offsetMs = Random.nextLong(0, cfg.minIntervalMin * 60_000L + 1)
+        if (from.isBefore(todayStart) && isDateAllowed(today, cfg)) {
+            val windowDurationMs = Duration.between(todayStart, todayEnd).toMillis()
+            val maxOffsetMs = minOf(cfg.minIntervalMin * 60_000L, (windowDurationMs - 1L).coerceAtLeast(0L))
+            val offsetMs = if (maxOffsetMs > 0L) Random.nextLong(0, maxOffsetMs + 1) else 0L
             return todayStart.toInstant().toEpochMilli() + offsetMs
         }
 
@@ -67,11 +80,14 @@ object AlarmScheduler {
 
         // Check subsequent days
         for (d in 1..7) {
-            val candidateDate = from.toLocalDate().plusDays(d.toLong())
+            val candidateDate = today.plusDays(d.toLong())
             val candidateDow = candidateDate.dayOfWeek.value
             if (cfg.repeatDays.contains(candidateDow)) {
                 val start = candidateDate.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
-                val offsetMs = Random.nextLong(0, cfg.minIntervalMin * 60_000L + 1)
+                val end = candidateDate.atTime(cfg.endHour, cfg.endMinute).atZone(zone)
+                val windowDurationMs = Duration.between(start, end).toMillis()
+                val maxOffsetMs = minOf(cfg.minIntervalMin * 60_000L, (windowDurationMs - 1L).coerceAtLeast(0L))
+                val offsetMs = if (maxOffsetMs > 0L) Random.nextLong(0, maxOffsetMs + 1) else 0L
                 return start.toInstant().toEpochMilli() + offsetMs
             }
         }

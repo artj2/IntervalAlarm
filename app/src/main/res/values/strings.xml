@@ -28,6 +28,11 @@
     <string name="msg_min_exceeds_max">Minimum interval can\'t be larger than maximum interval</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_include_today_title">Include Today?</string>
+    <string name="dialog_include_today_msg">Today is not one of the selected repeat days. Would you like to start the alarm for today as well, or only for the selected repeat days?</string>
+    <string name="btn_include_today">Include Today</string>
+    <string name="btn_repeat_days_only">Repeat Days Only</string>
+    <string name="btn_start_for_today">Start for Today</string>
 
     <!-- History Screen -->
     <string name="history_empty">No alarms fired yet</string>

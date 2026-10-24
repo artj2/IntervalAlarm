@@ -16,7 +16,8 @@ data class AlarmConfig(
     val timeAloneSeconds: Long = 60L,
     val adjustmentPercent: Int = 10,
     val almostDoneSeconds: Long = 60L,
-    val nextTriggerMillis: Long? = null
+    val nextTriggerMillis: Long? = null,
+    val overrideTodayDate: String? = null
 ) {
     val windowMinutes: Int
         get() {

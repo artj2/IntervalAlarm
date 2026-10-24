@@ -33,27 +33,72 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun saveAndToggleActive(minInterval: Int, maxInterval: Int, adjustmentPercent: Int) {
+    fun saveAndToggleActive(
+        minInterval: Int,
+        maxInterval: Int,
+        adjustmentPercent: Int,
+        includeTodayOverride: Boolean = false
+    ) {
         viewModelScope.launch {
-            val cfg = AlarmPreferences.update(ctx) {
-                copy(
-                    minIntervalMin = minInterval,
-                    maxIntervalMin = maxInterval,
-                    adjustmentPercent = adjustmentPercent
-                )
+            if (config.value.isActive) {
+                AlarmScheduler.cancel(ctx, clearPreference = false)
+                AlarmPreferences.update(ctx) {
+                    copy(
+                        minIntervalMin = minInterval,
+                        maxIntervalMin = maxInterval,
+                        adjustmentPercent = adjustmentPercent,
+                        isActive = false,
+                        nextTriggerMillis = null,
+                        overrideTodayDate = null
+                    )
+                }
+            } else {
+                val todayStr = java.time.LocalDate.now(java.time.ZoneId.systemDefault()).toString()
+                val cfg = AlarmPreferences.update(ctx) {
+                    copy(
+                        minIntervalMin = minInterval,
+                        maxIntervalMin = maxInterval,
+                        adjustmentPercent = adjustmentPercent,
+                        overrideTodayDate = if (includeTodayOverride) todayStr else null
+                    )
+                }
+                toggleActiveWithConfig(cfg, includeTodayOverride)
             }
-            toggleActiveWithConfig(cfg)
         }
     }
 
-    fun toggleActive() {
+    fun startForToday() {
         viewModelScope.launch {
+            val zone = java.time.ZoneId.systemDefault()
+            val now = java.time.ZonedDateTime.now(zone)
+            val today = now.toLocalDate()
             val cfg = config.value
-            toggleActiveWithConfig(cfg)
+            val todayStart = today.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+            val todayEnd = today.atTime(cfg.endHour, cfg.endMinute).atZone(zone)
+            val minIntervalMs = cfg.minIntervalMin * 60_000L
+            val remainingMsToday = if (now.isBefore(todayStart)) {
+                java.time.Duration.between(todayStart, todayEnd).toMillis()
+            } else if (now.isBefore(todayEnd)) {
+                java.time.Duration.between(now, todayEnd).toMillis()
+            } else {
+                0L
+            }
+            if (remainingMsToday < minIntervalMs) {
+                android.widget.Toast.makeText(
+                    ctx,
+                    ctx.getString(com.example.intervalalarm.R.string.msg_not_enough_time_today),
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+            val updated = AlarmPreferences.update(ctx) {
+                copy(isActive = true, overrideTodayDate = today.toString())
+            }
+            AlarmScheduler.schedule(ctx, updated)
         }
     }
 
-    private suspend fun toggleActiveWithConfig(cfg: AlarmConfig) {
+    private suspend fun toggleActiveWithConfig(cfg: AlarmConfig, includeTodayOverride: Boolean = false) {
         if (cfg.isActive) {
             AlarmScheduler.cancel(ctx, clearPreference = false)
             AlarmPreferences.setActive(ctx, false)
@@ -61,8 +106,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             if (cfg.windowMinutes < cfg.minIntervalMin) return
             val zone = java.time.ZoneId.systemDefault()
             val now = java.time.ZonedDateTime.now(zone)
-            val todayStart = now.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
-            val todayEnd = now.toLocalDate().atTime(cfg.endHour, cfg.endMinute).atZone(zone)
+            val today = now.toLocalDate()
+            val todayStart = today.atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+            val todayEnd = today.atTime(cfg.endHour, cfg.endMinute).atZone(zone)
             val minIntervalMs = cfg.minIntervalMin * 60_000L
             val remainingMsToday = if (now.isBefore(todayStart)) {
                 java.time.Duration.between(todayStart, todayEnd).toMillis()
@@ -72,7 +118,11 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                 0L
             }
 
-            if (remainingMsToday < minIntervalMs) {
+            val shouldCheckToday = cfg.repeatDays.isEmpty() ||
+                cfg.repeatDays.contains(today.dayOfWeek.value) ||
+                includeTodayOverride
+
+            if (shouldCheckToday && remainingMsToday < minIntervalMs) {
                 android.widget.Toast.makeText(
                     ctx,
                     ctx.getString(com.example.intervalalarm.R.string.msg_not_enough_time_today),
@@ -82,7 +132,10 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                     return
                 }
             }
-            val activeCfg = cfg.copy(isActive = true)
+            val activeCfg = cfg.copy(
+                isActive = true,
+                overrideTodayDate = if (includeTodayOverride && remainingMsToday >= minIntervalMs) today.toString() else null
+            )
             AlarmScheduler.schedule(ctx, activeCfg)
         }
     }
