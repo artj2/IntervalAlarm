@@ -40,21 +40,9 @@ class AlarmFiringService : Service() {
     override fun onCreate() {
         super.onCreate()
         attributedContext = createAttributionContext("alarm_firing")
-        _isFiring.value = true
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_DISMISS -> {
-                dismissAlarm()
-                return START_NOT_STICKY
-            }
-            ACTION_ACCEPT -> {
-                acceptAlarm()
-                return START_NOT_STICKY
-            }
-        }
-
         startForeground(
             NOTIF_ID_SERVICE,
             NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_SERVICE)
@@ -64,6 +52,27 @@ class AlarmFiringService : Service() {
                 .build(),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         )
+
+        when (intent?.action) {
+            ACTION_DISMISS -> {
+                if (_isFiring.value) {
+                    dismissAlarm()
+                } else {
+                    stopSelf()
+                }
+                return START_NOT_STICKY
+            }
+            ACTION_ACCEPT -> {
+                if (_isFiring.value) {
+                    acceptAlarm()
+                } else {
+                    stopSelf()
+                }
+                return START_NOT_STICKY
+            }
+        }
+
+        _isFiring.value = true
 
         scope.launch {
             try {
@@ -121,7 +130,7 @@ class AlarmFiringService : Service() {
         val acceptIntent = PendingIntent.getActivity(
             this, 2,
             Intent(this, MainActivity::class.java).apply {
-                action = "com.example.intervalalarm.ACTION_ACCEPT_FROM_NOTIF"
+                action = ACTION_ACCEPT_FROM_NOTIF
                 putExtra("navigate_to_timer", true)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
@@ -285,6 +294,7 @@ class AlarmFiringService : Service() {
     companion object {
         const val ACTION_DISMISS = "com.example.intervalalarm.DISMISS_ALARM"
         const val ACTION_ACCEPT = "com.example.intervalalarm.ACCEPT_ALARM"
+        const val ACTION_ACCEPT_FROM_NOTIF = "com.example.intervalalarm.ACTION_ACCEPT_FROM_NOTIF"
         private const val NOTIF_ID_SERVICE = 9001
         private const val NOTIF_ID_ALARM = 9002
 
