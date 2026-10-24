@@ -1,6 +1,7 @@
 package com.example.intervalalarm.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -44,6 +45,7 @@ fun HomeScreen(vm: AlarmViewModel) {
     var minText by remember(cfg.minIntervalMin) { mutableStateOf(cfg.minIntervalMin.toString()) }
     var maxText by remember(cfg.maxIntervalMin) { mutableStateOf(cfg.maxIntervalMin.toString()) }
     var adjText by remember(cfg.adjustmentPercent) { mutableStateOf(cfg.adjustmentPercent.toString()) }
+    var validationToast by remember { mutableStateOf<Toast?>(null) }
 
     val resolveValidatedFields: () -> Triple<Int, Int, Int> = {
         val currentMin = (minText.toIntOrNull() ?: cfg.minIntervalMin).coerceAtLeast(1)
@@ -75,8 +77,19 @@ fun HomeScreen(vm: AlarmViewModel) {
     val onMinTextChange: (String) -> Unit = { newText ->
         val currentMax = maxText.toIntOrNull()?.coerceAtLeast(1) ?: cfg.maxIntervalMin
         val parsed = newText.toIntOrNull()
-        if (newText.isEmpty() || (newText.all { it.isDigit() } && newText.length <= 4 && parsed != null && parsed in 1..currentMax)) {
+        if (newText.isEmpty()) {
             minText = newText
+        } else if (newText.all { it.isDigit() } && newText.length <= 4 && parsed != null) {
+            if (parsed > currentMax) {
+                validationToast?.cancel()
+                validationToast = Toast.makeText(
+                    ctx,
+                    ctx.getString(R.string.msg_min_exceeds_max),
+                    Toast.LENGTH_SHORT
+                ).also { it.show() }
+            } else if (parsed >= 1) {
+                minText = newText
+            }
         }
     }
 
