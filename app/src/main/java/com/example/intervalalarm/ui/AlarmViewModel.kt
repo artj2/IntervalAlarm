@@ -55,7 +55,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun toggleActiveWithConfig(cfg: AlarmConfig) {
         if (cfg.isActive) {
-            AlarmScheduler.cancel(ctx)
+            AlarmScheduler.cancel(ctx, clearPreference = false)
             AlarmPreferences.setActive(ctx, false)
         } else {
             if (cfg.windowMinutes < cfg.minIntervalMin) return
@@ -82,7 +82,6 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                     return
                 }
             }
-            AlarmPreferences.setActive(ctx, true)
             val activeCfg = cfg.copy(isActive = true)
             AlarmScheduler.schedule(ctx, activeCfg)
         }

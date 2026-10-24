@@ -81,10 +81,12 @@ object AlarmScheduler {
 
     suspend fun schedule(ctx: Context, cfg: AlarmConfig): Long? {
         val triggerAt = nextTriggerTime(cfg) ?: run {
-            cancel(ctx)
-            if (cfg.repeatDays.isEmpty()) {
-                AlarmPreferences.setActive(ctx, false)
-            }
+            cancel(ctx, clearPreference = false)
+            AlarmPreferences.setActive(
+                ctx,
+                active = cfg.isActive && cfg.repeatDays.isNotEmpty(),
+                nextTriggerMillis = null
+            )
             return null
         }
 
@@ -100,14 +102,16 @@ object AlarmScheduler {
             // this usually shouldn't happen unless restricted by battery saver/system.
             android.util.Log.w("AlarmScheduler", "Cannot schedule exact alarms")
         }
-        AlarmPreferences.setNextTriggerMillis(ctx, triggerAt)
+        AlarmPreferences.setActive(ctx, active = true, nextTriggerMillis = triggerAt)
         return triggerAt
     }
 
-    suspend fun cancel(ctx: Context) {
+    suspend fun cancel(ctx: Context, clearPreference: Boolean = true) {
         val am = ctx.getSystemService(AlarmManager::class.java)
         am.cancel(makePendingIntent(ctx))
-        AlarmPreferences.setNextTriggerMillis(ctx, null)
+        if (clearPreference) {
+            AlarmPreferences.setNextTriggerMillis(ctx, null)
+        }
     }
 
     fun getNextTriggerDisplay(ctx: Context, triggerMillis: Long?, nowMillis: Long = System.currentTimeMillis()): NextTriggerDisplay {
