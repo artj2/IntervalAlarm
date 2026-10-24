@@ -104,25 +104,6 @@ object AlarmScheduler {
         return triggerAt
     }
 
-    suspend fun scheduleNextWindow(ctx: Context, cfg: AlarmConfig) {
-        val next = nextWindowStart(cfg) ?: run {
-            cancel(ctx)
-            return
-        }
-
-        val am = ctx.getSystemService(AlarmManager::class.java)
-        if (am.canScheduleExactAlarms()) {
-            am.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                next,
-                makePendingIntent(ctx)
-            )
-        } else {
-            android.util.Log.w("AlarmScheduler", "Cannot schedule exact alarms")
-        }
-        AlarmPreferences.setNextTriggerMillis(ctx, next)
-    }
-
     suspend fun cancel(ctx: Context) {
         val am = ctx.getSystemService(AlarmManager::class.java)
         am.cancel(makePendingIntent(ctx))
@@ -172,11 +153,6 @@ object AlarmScheduler {
         }
 
         return NextTriggerDisplay(timeText = timeText, countdownText = countdownText)
-    }
-
-    fun formatNextTrigger(ctx: Context, triggerMillis: Long?, nowMillis: Long = System.currentTimeMillis()): String {
-        val display = getNextTriggerDisplay(ctx, triggerMillis, nowMillis)
-        return if (display.timeText == "—") display.countdownText else "Next: ${display.timeText} (${display.countdownText})"
     }
 
     private fun makePendingIntent(ctx: Context): PendingIntent {

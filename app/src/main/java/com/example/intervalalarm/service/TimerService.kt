@@ -463,10 +463,5 @@ class TimerService : Service() {
         val decisionTimerSeconds = _decisionTimerSeconds.asStateFlow()
 
         var currentHistoryId: Long = -1L
-
-        fun stop(ctx: android.content.Context) {
-            ctx.stopService(Intent(ctx, TimerService::class.java))
-            _isFinished.value = false
-        }
     }
 }

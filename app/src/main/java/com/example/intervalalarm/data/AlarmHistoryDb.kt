@@ -22,9 +22,6 @@ interface AlarmHistoryDao {
     @Insert
     suspend fun insert(entry: AlarmHistoryEntry): Long
 
-    @Update
-    suspend fun update(entry: AlarmHistoryEntry)
-
     @Query("UPDATE alarm_history SET status = :status WHERE id = :id")
     suspend fun updateStatus(id: Long, status: String)
 
