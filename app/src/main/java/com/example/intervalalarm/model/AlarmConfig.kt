@@ -9,6 +9,8 @@ data class AlarmConfig(
     val maxIntervalMin: Int = 60,
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
+    val soundDurationSeconds: Long = 5L,
+    val vibrationDurationSeconds: Long = 2L,
     val isActive: Boolean = false,
     val repeatDays: Set<Int> = emptySet(),
     val timeAloneSeconds: Long = 60L,

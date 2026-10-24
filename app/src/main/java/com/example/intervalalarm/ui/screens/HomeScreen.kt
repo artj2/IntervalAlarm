@@ -516,8 +516,24 @@ private fun AlertsSection(
                 .padding(horizontal = 14.dp, vertical = (4.dp * scaleFactor).coerceIn(2.dp, 8.dp)),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            ToggleRow(stringResource(R.string.alert_sound), cfg.soundEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(soundEnabled = it) } }
-            ToggleRow(stringResource(R.string.alert_vibration), cfg.vibrationEnabled, bodyStyle, scaleFactor) { vm.updateConfig { copy(vibrationEnabled = it) } }
+            ToggleRow(
+                label = stringResource(R.string.alert_sound),
+                checked = cfg.soundEnabled,
+                durationSeconds = cfg.soundDurationSeconds,
+                textStyle = bodyStyle,
+                scale = scaleFactor,
+                onDurationPick = { vm.updateConfig { copy(soundDurationSeconds = it) } },
+                onToggle = { vm.updateConfig { copy(soundEnabled = it) } }
+            )
+            ToggleRow(
+                label = stringResource(R.string.alert_vibration),
+                checked = cfg.vibrationEnabled,
+                durationSeconds = cfg.vibrationDurationSeconds,
+                textStyle = bodyStyle,
+                scale = scaleFactor,
+                onDurationPick = { vm.updateConfig { copy(vibrationDurationSeconds = it) } },
+                onToggle = { vm.updateConfig { copy(vibrationEnabled = it) } }
+            )
         }
     }
 }
@@ -587,10 +603,88 @@ private fun RepeatDaysSection(
 // ── Helpers ──────────────────────────────────────────────
 
 @Composable
-private fun ToggleRow(label: String, checked: Boolean, textStyle: androidx.compose.ui.text.TextStyle, scale: Float, onToggle: (Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+private fun ToggleRow(
+    label: String,
+    checked: Boolean,
+    durationSeconds: Long,
+    textStyle: androidx.compose.ui.text.TextStyle,
+    scale: Float,
+    onDurationPick: (Long) -> Unit,
+    onToggle: (Boolean) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val m = durationSeconds / 60
+    val s = durationSeconds % 60
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(label, style = textStyle)
-        Switch(checked = checked, onCheckedChange = onToggle, modifier = Modifier.scale(0.7f * scale))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedCard(
+                onClick = { showDialog = true }
+            ) {
+                Box(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("%02d:%02d".format(m, s), style = textStyle)
+                }
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = onToggle,
+                modifier = Modifier.scale(0.7f * scale)
+            )
+        }
+    }
+
+    if (showDialog) {
+        var localM by remember { mutableStateOf(m.toString()) }
+        var localS by remember { mutableStateOf(s.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newM = localM.toLongOrNull() ?: 0L
+                    val newS = localS.toLongOrNull() ?: 0L
+                    val total = (newM * 60 + newS).coerceIn(1L, 3600L)
+                    onDurationPick(total)
+                    showDialog = false
+                }) { Text(stringResource(R.string.dialog_ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.dialog_cancel)) }
+            },
+            title = { Text(label) },
+            text = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = localM,
+                        onValueChange = { if (it.length <= 2 && it.all { char -> char.isDigit() }) localM = it },
+                        label = { Text("M") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = localS,
+                        onValueChange = { if (it.length <= 2 && it.all { char -> char.isDigit() }) localS = it },
+                        label = { Text("S") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+            }
+        )
     }
 }
 

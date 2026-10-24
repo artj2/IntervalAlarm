@@ -33,6 +33,8 @@ class AlarmFiringService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var mediaPlayer: MediaPlayer? = null
     private var vibratorManager: VibratorManager? = null
+    private var soundTimeoutJob: Job? = null
+    private var vibrationTimeoutJob: Job? = null
     private lateinit var attributedContext: Context
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -90,10 +92,20 @@ class AlarmFiringService : Service() {
 
                 if (cfg.vibrationEnabled) {
                     startVibration()
+                    vibrationTimeoutJob?.cancel()
+                    vibrationTimeoutJob = scope.launch {
+                        delay(cfg.vibrationDurationSeconds.coerceAtLeast(1L) * 1000L)
+                        stopVibrationOnly()
+                    }
                 }
 
                 if (cfg.soundEnabled) {
                     startSound()
+                    soundTimeoutJob?.cancel()
+                    soundTimeoutJob = scope.launch {
+                        delay(cfg.soundDurationSeconds.coerceAtLeast(1L) * 1000L)
+                        stopSoundOnly()
+                    }
                 }
 
                 if (!cfg.soundEnabled && !cfg.vibrationEnabled) {
@@ -232,7 +244,8 @@ class AlarmFiringService : Service() {
         }
     }
 
-    private fun stopAlarmSoundOnly() {
+    @Synchronized
+    private fun stopSoundOnly() {
         mediaPlayer?.let {
             try {
                 it.setOnCompletionListener(null)
@@ -245,9 +258,22 @@ class AlarmFiringService : Service() {
             }
         }
         mediaPlayer = null
+    }
 
+    @Synchronized
+    private fun stopVibrationOnly() {
         vibratorManager?.cancel()
         vibratorManager = null
+    }
+
+    private fun stopAlarmSoundOnly() {
+        soundTimeoutJob?.cancel()
+        soundTimeoutJob = null
+        vibrationTimeoutJob?.cancel()
+        vibrationTimeoutJob = null
+
+        stopSoundOnly()
+        stopVibrationOnly()
 
         val nm = getSystemService(NotificationManager::class.java)
         nm.cancel(NOTIF_ID_ALARM)
