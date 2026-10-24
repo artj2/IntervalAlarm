@@ -159,15 +159,19 @@ fun HomeScreen(vm: AlarmViewModel) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(
                                 onClick = {
-                                    val intent = Intent(ctx, AlarmFiringService::class.java).apply { action = AlarmFiringService.ACTION_ACCEPT }
-                                    ctx.startForegroundService(intent)
+                                    if (AlarmFiringService.isFiring.value) {
+                                        val intent = Intent(ctx, AlarmFiringService::class.java).apply { action = AlarmFiringService.ACTION_ACCEPT }
+                                        ctx.startService(intent)
+                                    }
                                 },
                                 modifier = Modifier.weight(1f)
                             ) { Text(stringResource(R.string.btn_accept), fontSize = bodyStyle.fontSize) }
                             OutlinedButton(
                                 onClick = {
-                                    val intent = Intent(ctx, AlarmFiringService::class.java).apply { action = AlarmFiringService.ACTION_DISMISS }
-                                    ctx.startForegroundService(intent)
+                                    if (AlarmFiringService.isFiring.value) {
+                                        val intent = Intent(ctx, AlarmFiringService::class.java).apply { action = AlarmFiringService.ACTION_DISMISS }
+                                        ctx.startService(intent)
+                                    }
                                 },
                                 modifier = Modifier.weight(1f)
                             ) { Text(stringResource(R.string.btn_dismiss), fontSize = bodyStyle.fontSize) }

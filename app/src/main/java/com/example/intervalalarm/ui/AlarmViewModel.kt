@@ -98,7 +98,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                 val intent = Intent(ctx, AlarmFiringService::class.java).apply {
                     action = AlarmFiringService.ACTION_ACCEPT
                 }
-                ctx.startForegroundService(intent)
+                ctx.startService(intent)
                 return@launch
             }
 
