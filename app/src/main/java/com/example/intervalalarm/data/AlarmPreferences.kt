@@ -19,6 +19,8 @@ object AlarmPreferences {
     private val MAX_INTERVAL = intPreferencesKey("max_interval")
     private val SOUND_ON = booleanPreferencesKey("sound_on")
     private val VIB_ON = booleanPreferencesKey("vib_on")
+    private val SOUND_DURATION_SECONDS = longPreferencesKey("sound_duration_seconds")
+    private val VIB_DURATION_SECONDS = longPreferencesKey("vib_duration_seconds")
     private val IS_ACTIVE = booleanPreferencesKey("is_active")
     private val REPEAT_DAYS = stringPreferencesKey("repeat_days")
     private val TIME_ALONE = longPreferencesKey("time_alone")
@@ -36,6 +38,8 @@ object AlarmPreferences {
             maxIntervalMin = p[MAX_INTERVAL] ?: 80,
             soundEnabled = p[SOUND_ON] ?: true,
             vibrationEnabled = p[VIB_ON] ?: true,
+            soundDurationSeconds = p[SOUND_DURATION_SECONDS] ?: 5L,
+            vibrationDurationSeconds = p[VIB_DURATION_SECONDS] ?: 2L,
             isActive = p[IS_ACTIVE] ?: false,
             repeatDays = p[REPEAT_DAYS]
                 ?.split(",")
@@ -57,6 +61,8 @@ object AlarmPreferences {
         p[MAX_INTERVAL] = cfg.maxIntervalMin
         p[SOUND_ON] = cfg.soundEnabled
         p[VIB_ON] = cfg.vibrationEnabled
+        p[SOUND_DURATION_SECONDS] = cfg.soundDurationSeconds
+        p[VIB_DURATION_SECONDS] = cfg.vibrationDurationSeconds
         p[IS_ACTIVE] = cfg.isActive
         p[REPEAT_DAYS] = cfg.repeatDays.joinToString(",")
         p[TIME_ALONE] = cfg.timeAloneSeconds
