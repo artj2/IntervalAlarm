@@ -3,6 +3,7 @@ package com.example.intervalalarm.ui.screens
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,9 +14,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -35,6 +39,60 @@ fun HomeScreen(vm: AlarmViewModel) {
     val isFiring by AlarmFiringService.isFiring.collectAsState()
     val scroll = rememberScrollState()
     val ctx = LocalContext.current
+    val focusManager = LocalFocusManager.current
+
+    var minText by remember(cfg.minIntervalMin) { mutableStateOf(cfg.minIntervalMin.toString()) }
+    var maxText by remember(cfg.maxIntervalMin) { mutableStateOf(cfg.maxIntervalMin.toString()) }
+    var adjText by remember(cfg.adjustmentPercent) { mutableStateOf(cfg.adjustmentPercent.toString()) }
+
+    val resolveValidatedFields: () -> Triple<Int, Int, Int> = {
+        val currentMin = (minText.toIntOrNull() ?: cfg.minIntervalMin).coerceAtLeast(1)
+        val currentMax = (maxText.toIntOrNull() ?: cfg.maxIntervalMin).coerceAtLeast(1)
+        val validMax = maxOf(currentMin, currentMax)
+        val validMin = currentMin.coerceIn(1, validMax)
+        val validAdj = (adjText.toIntOrNull() ?: cfg.adjustmentPercent).coerceIn(1, 100)
+
+        minText = validMin.toString()
+        maxText = validMax.toString()
+        adjText = validAdj.toString()
+
+        Triple(validMin, validMax, validAdj)
+    }
+
+    val commitFields: () -> Unit = {
+        val (validMin, validMax, validAdj) = resolveValidatedFields()
+        if (validMin != cfg.minIntervalMin || validMax != cfg.maxIntervalMin || validAdj != cfg.adjustmentPercent) {
+            vm.updateConfig {
+                copy(
+                    minIntervalMin = validMin,
+                    maxIntervalMin = validMax,
+                    adjustmentPercent = validAdj
+                )
+            }
+        }
+    }
+
+    val onMinTextChange: (String) -> Unit = { newText ->
+        val currentMax = maxText.toIntOrNull()?.coerceAtLeast(1) ?: cfg.maxIntervalMin
+        val parsed = newText.toIntOrNull()
+        if (newText.isEmpty() || (newText.all { it.isDigit() } && newText.length <= 4 && parsed != null && parsed in 1..currentMax)) {
+            minText = newText
+        }
+    }
+
+    val onMaxTextChange: (String) -> Unit = { newText ->
+        val parsed = newText.toIntOrNull()
+        if (newText.isEmpty() || (newText.all { it.isDigit() } && newText.length <= 4 && parsed != null && parsed >= 1)) {
+            maxText = newText
+        }
+    }
+
+    val onAdjTextChange: (String) -> Unit = { newText ->
+        val parsed = newText.toIntOrNull()
+        if (newText.isEmpty() || (newText.all { it.isDigit() } && newText.length <= 3 && parsed != null && parsed in 1..100)) {
+            adjText = newText
+        }
+    }
 
     val currentTime by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
@@ -141,14 +199,22 @@ fun HomeScreen(vm: AlarmViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         FilledTonalButton(
-                            onClick = { vm.startManualAloneTime() },
+                            onClick = {
+                                commitFields()
+                                focusManager.clearFocus()
+                                vm.startManualAloneTime()
+                            },
                             modifier = Modifier.height(44.dp * scaleFactor),
                             contentPadding = PaddingValues(horizontal = (12.dp * scaleFactor).coerceIn(8.dp, 16.dp))
                         ) {
                             Text(stringResource(R.string.btn_alone_time), fontSize = bodyStyle.fontSize)
                         }
                         FilledTonalButton(
-                            onClick = { vm.toggleActive() },
+                            onClick = {
+                                val (validMin, validMax, validAdj) = resolveValidatedFields()
+                                focusManager.clearFocus()
+                                vm.saveAndToggleActive(validMin, validMax, validAdj)
+                            },
                             colors = if (cfg.isActive) {
                                 ButtonDefaults.filledTonalButtonColors(
                                     containerColor = Color(0xFFFFD1DC),
@@ -205,20 +271,21 @@ fun HomeScreen(vm: AlarmViewModel) {
 
                 if (showSettings) {
                     TimeWindowSection(cfg, vm, false, sectionHeaderStyle, largeStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
-                    TimeAloneSection(cfg, vm, false, sectionHeaderStyle, largeStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
-                    IntervalRangeSection(cfg, vm, false, sectionHeaderStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                    TimeAloneSection(cfg, vm, adjText, onAdjTextChange, commitFields, false, sectionHeaderStyle, largeStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                    IntervalRangeSection(minText, onMinTextChange, maxText, onMaxTextChange, commitFields, false, sectionHeaderStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
                     AlmostDoneSection(cfg, vm, false, sectionHeaderStyle, largeStyle, sectionTopPadding, sectionBottomPadding)
                     RepeatDaysSection(cfg, vm, false, sectionHeaderStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
                 }
             } else {
                 TimeWindowSection(cfg, vm, true, sectionHeaderStyle, largeStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
-                TimeAloneSection(cfg, vm, true, sectionHeaderStyle, largeStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
-                IntervalRangeSection(cfg, vm, true, sectionHeaderStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                TimeAloneSection(cfg, vm, adjText, onAdjTextChange, commitFields, true, sectionHeaderStyle, largeStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
+                IntervalRangeSection(minText, onMinTextChange, maxText, onMaxTextChange, commitFields, true, sectionHeaderStyle, bodyStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
                 AlertsSection(cfg, vm, sectionHeaderStyle, bodyStyle, scaleFactor, sectionTopPadding, sectionBottomPadding)
                 AlmostDoneSection(cfg, vm, true, sectionHeaderStyle, largeStyle, sectionTopPadding, sectionBottomPadding)
                 RepeatDaysSection(cfg, vm, true, sectionHeaderStyle, labelStyle, sectionTopPadding, sectionBottomPadding)
 
-                if (cfg.windowMinutes < cfg.minIntervalMin) {
+                val effectiveMin = minText.toIntOrNull() ?: cfg.minIntervalMin
+                if (cfg.windowMinutes < effectiveMin) {
                     Text(
                         stringResource(R.string.warning_window_too_small),
                         color = MaterialTheme.colorScheme.error,
@@ -328,6 +395,9 @@ private fun TimeWindowSection(
 private fun TimeAloneSection(
     cfg: com.example.intervalalarm.model.AlarmConfig,
     vm: AlarmViewModel,
+    adjText: String,
+    onAdjTextChange: (String) -> Unit,
+    onCommit: () -> Unit,
     enabled: Boolean,
     headerStyle: androidx.compose.ui.text.TextStyle,
     largeStyle: androidx.compose.ui.text.TextStyle,
@@ -364,8 +434,9 @@ private fun TimeAloneSection(
             modifier = Modifier.weight(1.5f)
         )
         IntervalField(
-            label = "%", configValue = cfg.adjustmentPercent, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
-            onCommit = { v -> vm.updateConfig { copy(adjustmentPercent = v.coerceIn(1, 100)) } },
+            label = "%", value = adjText, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
+            onValueChange = onAdjTextChange,
+            onCommit = onCommit,
             modifier = Modifier.weight(1f)
         )
     }
@@ -373,8 +444,11 @@ private fun TimeAloneSection(
 
 @Composable
 private fun IntervalRangeSection(
-    cfg: com.example.intervalalarm.model.AlarmConfig,
-    vm: AlarmViewModel,
+    minText: String,
+    onMinTextChange: (String) -> Unit,
+    maxText: String,
+    onMaxTextChange: (String) -> Unit,
+    onCommit: () -> Unit,
     enabled: Boolean,
     headerStyle: androidx.compose.ui.text.TextStyle,
     bodyStyle: androidx.compose.ui.text.TextStyle,
@@ -389,13 +463,15 @@ private fun IntervalRangeSection(
     )
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         IntervalField(
-            label = "Min Int", configValue = cfg.minIntervalMin, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
-            onCommit = { v -> vm.updateConfig { copy(minIntervalMin = v.coerceIn(1, cfg.maxIntervalMin)) } },
+            label = "Min Int", value = minText, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
+            onValueChange = onMinTextChange,
+            onCommit = onCommit,
             modifier = Modifier.weight(1f)
         )
         IntervalField(
-            label = "Max Int", configValue = cfg.maxIntervalMin, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
-            onCommit = { v -> vm.updateConfig { copy(maxIntervalMin = v.coerceAtLeast(cfg.minIntervalMin)) } },
+            label = "Max Int", value = maxText, enabled = enabled, textStyle = bodyStyle, labelStyle = labelStyle,
+            onValueChange = onMaxTextChange,
+            onCommit = onCommit,
             modifier = Modifier.weight(1f)
         )
     }
@@ -696,25 +772,43 @@ private fun TimePickerCard(
 
 @Composable
 private fun IntervalField(
-    label: String, configValue: Int, enabled: Boolean,
-    textStyle: androidx.compose.ui.text.TextStyle, labelStyle: androidx.compose.ui.text.TextStyle,
-    onCommit: (Int) -> Unit, modifier: Modifier = Modifier
+    label: String,
+    value: String,
+    enabled: Boolean,
+    textStyle: androidx.compose.ui.text.TextStyle,
+    labelStyle: androidx.compose.ui.text.TextStyle,
+    onValueChange: (String) -> Unit,
+    onCommit: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    var text by remember(configValue) { mutableStateOf(configValue.toString()) }
+    val focusManager = LocalFocusManager.current
+    var wasFocused by remember { mutableStateOf(false) }
 
     OutlinedTextField(
-        value = text,
-        onValueChange = { newText ->
-            if (newText.isEmpty() || newText.all { it.isDigit() }) {
-                text = newText
-                val parsed = newText.toIntOrNull()
-                if (parsed != null && parsed > 0) onCommit(parsed)
-            }
-        },
+        value = value,
+        onValueChange = onValueChange,
         label = { Text(label, style = labelStyle) },
-        enabled = enabled, singleLine = true, textStyle = textStyle,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = modifier
+        enabled = enabled,
+        singleLine = true,
+        textStyle = textStyle,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onCommit()
+                focusManager.clearFocus()
+            }
+        ),
+        modifier = modifier.onFocusChanged { focusState ->
+            if (focusState.isFocused) {
+                wasFocused = true
+            } else if (wasFocused) {
+                wasFocused = false
+                onCommit()
+            }
+        }
     )
 }
 
