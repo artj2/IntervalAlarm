@@ -28,6 +28,7 @@
     <string name="repeat_hint">Leave all unselected for manual start/stop only</string>
     <string name="warning_window_too_small">Warning: minimum interval is longer than the time window</string>
     <string name="msg_not_enough_time_today">There\'s not enough scheduled time today</string>
+    <string name="msg_min_exceeds_max">Minimum interval can\'t be larger than maximum interval</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Cancel</string>
 

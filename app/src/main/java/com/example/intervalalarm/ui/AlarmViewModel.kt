@@ -29,46 +29,62 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateConfig(transform: AlarmConfig.() -> AlarmConfig) {
         viewModelScope.launch {
-            val updated = config.value.transform()
-            AlarmPreferences.save(ctx, updated)
+            AlarmPreferences.update(ctx, transform)
+        }
+    }
+
+    fun saveAndToggleActive(minInterval: Int, maxInterval: Int, adjustmentPercent: Int) {
+        viewModelScope.launch {
+            val cfg = AlarmPreferences.update(ctx) {
+                copy(
+                    minIntervalMin = minInterval,
+                    maxIntervalMin = maxInterval,
+                    adjustmentPercent = adjustmentPercent
+                )
+            }
+            toggleActiveWithConfig(cfg)
         }
     }
 
     fun toggleActive() {
         viewModelScope.launch {
             val cfg = config.value
-            if (cfg.isActive) {
-                AlarmScheduler.cancel(ctx)
-                AlarmPreferences.setActive(ctx, false)
-            } else {
-                if (cfg.windowMinutes < cfg.minIntervalMin) return@launch
-                val zone = java.time.ZoneId.systemDefault()
-                val now = java.time.ZonedDateTime.now(zone)
-                val todayStart = now.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
-                val todayEnd = now.toLocalDate().atTime(cfg.endHour, cfg.endMinute).atZone(zone)
-                val minIntervalMs = cfg.minIntervalMin * 60_000L
-                val remainingMsToday = if (now.isBefore(todayStart)) {
-                    java.time.Duration.between(todayStart, todayEnd).toMillis()
-                } else if (now.isBefore(todayEnd)) {
-                    java.time.Duration.between(now, todayEnd).toMillis()
-                } else {
-                    0L
-                }
+            toggleActiveWithConfig(cfg)
+        }
+    }
 
-                if (remainingMsToday < minIntervalMs) {
-                    android.widget.Toast.makeText(
-                        ctx,
-                        ctx.getString(com.example.intervalalarm.R.string.msg_not_enough_time_today),
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                    if (cfg.repeatDays.isEmpty()) {
-                        return@launch
-                    }
-                }
-                AlarmPreferences.setActive(ctx, true)
-                val activeCfg = cfg.copy(isActive = true)
-                AlarmScheduler.schedule(ctx, activeCfg)
+    private suspend fun toggleActiveWithConfig(cfg: AlarmConfig) {
+        if (cfg.isActive) {
+            AlarmScheduler.cancel(ctx)
+            AlarmPreferences.setActive(ctx, false)
+        } else {
+            if (cfg.windowMinutes < cfg.minIntervalMin) return
+            val zone = java.time.ZoneId.systemDefault()
+            val now = java.time.ZonedDateTime.now(zone)
+            val todayStart = now.toLocalDate().atTime(cfg.startHour, cfg.startMinute).atZone(zone)
+            val todayEnd = now.toLocalDate().atTime(cfg.endHour, cfg.endMinute).atZone(zone)
+            val minIntervalMs = cfg.minIntervalMin * 60_000L
+            val remainingMsToday = if (now.isBefore(todayStart)) {
+                java.time.Duration.between(todayStart, todayEnd).toMillis()
+            } else if (now.isBefore(todayEnd)) {
+                java.time.Duration.between(now, todayEnd).toMillis()
+            } else {
+                0L
             }
+
+            if (remainingMsToday < minIntervalMs) {
+                android.widget.Toast.makeText(
+                    ctx,
+                    ctx.getString(com.example.intervalalarm.R.string.msg_not_enough_time_today),
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                if (cfg.repeatDays.isEmpty()) {
+                    return
+                }
+            }
+            AlarmPreferences.setActive(ctx, true)
+            val activeCfg = cfg.copy(isActive = true)
+            AlarmScheduler.schedule(ctx, activeCfg)
         }
     }
 

@@ -26,51 +26,66 @@ object AlarmPreferences {
     private val ALMOST_DONE_SECONDS = longPreferencesKey("almost_done_seconds")
     private val NEXT_TRIGGER_MILLIS = longPreferencesKey("next_trigger_millis")
 
-    fun configFlow(ctx: Context): Flow<AlarmConfig> =
-        ctx.dataStore.data.map { p ->
-            AlarmConfig(
-                startHour = p[START_HOUR] ?: 8,
-                startMinute = p[START_MIN] ?: 0,
-                endHour = p[END_HOUR] ?: 16,
-                endMinute = p[END_MIN] ?: 30,
-                minIntervalMin = p[MIN_INTERVAL] ?: 40,
-                maxIntervalMin = p[MAX_INTERVAL] ?: 80,
-                soundEnabled = p[SOUND_ON] ?: true,
-                vibrationEnabled = p[VIB_ON] ?: true,
-                isActive = p[IS_ACTIVE] ?: false,
-                repeatDays = p[REPEAT_DAYS]
-                    ?.split(",")
-                    ?.mapNotNull { it.trim().toIntOrNull() }
-                    ?.toSet()
-                    ?: emptySet(),
-                timeAloneSeconds = p[TIME_ALONE] ?: 60L,
-                adjustmentPercent = p[ADJUSTMENT_PERCENT] ?: 10,
-                almostDoneSeconds = p[ALMOST_DONE_SECONDS] ?: 60L,
-                nextTriggerMillis = p[NEXT_TRIGGER_MILLIS]?.takeIf { it > 0L }
-            )
+    private fun fromPreferences(p: Preferences): AlarmConfig =
+        AlarmConfig(
+            startHour = p[START_HOUR] ?: 8,
+            startMinute = p[START_MIN] ?: 0,
+            endHour = p[END_HOUR] ?: 16,
+            endMinute = p[END_MIN] ?: 30,
+            minIntervalMin = p[MIN_INTERVAL] ?: 40,
+            maxIntervalMin = p[MAX_INTERVAL] ?: 80,
+            soundEnabled = p[SOUND_ON] ?: true,
+            vibrationEnabled = p[VIB_ON] ?: true,
+            isActive = p[IS_ACTIVE] ?: false,
+            repeatDays = p[REPEAT_DAYS]
+                ?.split(",")
+                ?.mapNotNull { it.trim().toIntOrNull() }
+                ?.toSet()
+                ?: emptySet(),
+            timeAloneSeconds = p[TIME_ALONE] ?: 60L,
+            adjustmentPercent = p[ADJUSTMENT_PERCENT] ?: 10,
+            almostDoneSeconds = p[ALMOST_DONE_SECONDS] ?: 60L,
+            nextTriggerMillis = p[NEXT_TRIGGER_MILLIS]?.takeIf { it > 0L }
+        )
+
+    private fun writeToPreferences(p: MutablePreferences, cfg: AlarmConfig) {
+        p[START_HOUR] = cfg.startHour
+        p[START_MIN] = cfg.startMinute
+        p[END_HOUR] = cfg.endHour
+        p[END_MIN] = cfg.endMinute
+        p[MIN_INTERVAL] = cfg.minIntervalMin
+        p[MAX_INTERVAL] = cfg.maxIntervalMin
+        p[SOUND_ON] = cfg.soundEnabled
+        p[VIB_ON] = cfg.vibrationEnabled
+        p[IS_ACTIVE] = cfg.isActive
+        p[REPEAT_DAYS] = cfg.repeatDays.joinToString(",")
+        p[TIME_ALONE] = cfg.timeAloneSeconds
+        p[ADJUSTMENT_PERCENT] = cfg.adjustmentPercent
+        p[ALMOST_DONE_SECONDS] = cfg.almostDoneSeconds
+        if (cfg.nextTriggerMillis != null && cfg.nextTriggerMillis > 0L) {
+            p[NEXT_TRIGGER_MILLIS] = cfg.nextTriggerMillis
+        } else {
+            p.remove(NEXT_TRIGGER_MILLIS)
         }
+    }
+
+    fun configFlow(ctx: Context): Flow<AlarmConfig> =
+        ctx.dataStore.data.map { p -> fromPreferences(p) }
 
     suspend fun save(ctx: Context, cfg: AlarmConfig) {
         ctx.dataStore.edit { p ->
-            p[START_HOUR] = cfg.startHour
-            p[START_MIN] = cfg.startMinute
-            p[END_HOUR] = cfg.endHour
-            p[END_MIN] = cfg.endMinute
-            p[MIN_INTERVAL] = cfg.minIntervalMin
-            p[MAX_INTERVAL] = cfg.maxIntervalMin
-            p[SOUND_ON] = cfg.soundEnabled
-            p[VIB_ON] = cfg.vibrationEnabled
-            p[IS_ACTIVE] = cfg.isActive
-            p[REPEAT_DAYS] = cfg.repeatDays.joinToString(",")
-            p[TIME_ALONE] = cfg.timeAloneSeconds
-            p[ADJUSTMENT_PERCENT] = cfg.adjustmentPercent
-            p[ALMOST_DONE_SECONDS] = cfg.almostDoneSeconds
-            if (cfg.nextTriggerMillis != null && cfg.nextTriggerMillis > 0L) {
-                p[NEXT_TRIGGER_MILLIS] = cfg.nextTriggerMillis
-            } else {
-                p.remove(NEXT_TRIGGER_MILLIS)
-            }
+            writeToPreferences(p, cfg)
         }
+    }
+
+    suspend fun update(ctx: Context, transform: AlarmConfig.() -> AlarmConfig): AlarmConfig {
+        var result = AlarmConfig()
+        ctx.dataStore.edit { p ->
+            val updated = fromPreferences(p).transform()
+            writeToPreferences(p, updated)
+            result = updated
+        }
+        return result
     }
 
     fun calculateAdjustedTimeAlone(currentSeconds: Long, adjustmentPercent: Int, isSuccess: Boolean): Long {
