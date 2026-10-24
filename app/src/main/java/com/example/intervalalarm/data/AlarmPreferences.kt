@@ -37,6 +37,7 @@ object AlarmPreferences {
     private val ADJUSTMENT_PERCENT = intPreferencesKey("adjustment_percent")
     private val ALMOST_DONE_SECONDS = longPreferencesKey("almost_done_seconds")
     private val NEXT_TRIGGER_MILLIS = longPreferencesKey("next_trigger_millis")
+    private val OVERRIDE_TODAY_DATE = stringPreferencesKey("override_today_date")
 
     private val SESSION_END_EPOCH = longPreferencesKey("session_end_epoch")
     private val SESSION_INITIAL_SEC = longPreferencesKey("session_initial_sec")
@@ -66,7 +67,8 @@ object AlarmPreferences {
             timeAloneSeconds = p[TIME_ALONE] ?: 60L,
             adjustmentPercent = p[ADJUSTMENT_PERCENT] ?: 10,
             almostDoneSeconds = p[ALMOST_DONE_SECONDS] ?: 60L,
-            nextTriggerMillis = p[NEXT_TRIGGER_MILLIS]?.takeIf { it > 0L }
+            nextTriggerMillis = p[NEXT_TRIGGER_MILLIS]?.takeIf { it > 0L },
+            overrideTodayDate = p[OVERRIDE_TODAY_DATE]?.takeIf { it.isNotBlank() }
         )
 
     private fun writeToPreferences(p: MutablePreferences, cfg: AlarmConfig) {
@@ -89,6 +91,11 @@ object AlarmPreferences {
             p[NEXT_TRIGGER_MILLIS] = cfg.nextTriggerMillis
         } else {
             p.remove(NEXT_TRIGGER_MILLIS)
+        }
+        if (!cfg.overrideTodayDate.isNullOrBlank()) {
+            p[OVERRIDE_TODAY_DATE] = cfg.overrideTodayDate
+        } else {
+            p.remove(OVERRIDE_TODAY_DATE)
         }
     }
 
@@ -125,6 +132,9 @@ object AlarmPreferences {
                 p[NEXT_TRIGGER_MILLIS] = nextTriggerMillis
             } else {
                 p.remove(NEXT_TRIGGER_MILLIS)
+            }
+            if (!active) {
+                p.remove(OVERRIDE_TODAY_DATE)
             }
         }
     }
