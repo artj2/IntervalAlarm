@@ -95,12 +95,6 @@ object AlarmPreferences {
     fun configFlow(ctx: Context): Flow<AlarmConfig> =
         ctx.dataStore.data.map { p -> fromPreferences(p) }
 
-    suspend fun save(ctx: Context, cfg: AlarmConfig) {
-        ctx.dataStore.edit { p ->
-            writeToPreferences(p, cfg)
-        }
-    }
-
     suspend fun update(ctx: Context, transform: AlarmConfig.() -> AlarmConfig): AlarmConfig {
         var result = AlarmConfig()
         ctx.dataStore.edit { p ->

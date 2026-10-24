@@ -108,11 +108,6 @@ class AlarmFiringService : Service() {
                     }
                 }
 
-                if (!cfg.soundEnabled && !cfg.vibrationEnabled) {
-                    // Even if silent/no-vibe, we still showed notification, 
-                    // so we don't automatically stop anymore.
-                }
-
             } catch (e: Exception) {
                 android.util.Log.e("AlarmFiring", "Error firing alarm", e)
                 stopSelf()
@@ -277,20 +272,6 @@ class AlarmFiringService : Service() {
 
         val nm = getSystemService(NotificationManager::class.java)
         nm.cancel(NOTIF_ID_ALARM)
-    }
-
-    private fun scheduleNextAndStop() {
-        scope.launch {
-            try {
-                updateHistory("DISMISSED")
-                val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
-                if (cfg.isActive) {
-                    AlarmScheduler.schedule(this@AlarmFiringService, cfg)
-                }
-            } finally {
-                stopSelf()
-            }
-        }
     }
 
     private suspend fun updateHistory(status: String) {
