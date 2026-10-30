@@ -27,14 +27,18 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import java.util.concurrent.atomic.AtomicBoolean
 
 class AlarmFiringService : Service() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var mediaPlayer: MediaPlayer? = null
     private var vibratorManager: VibratorManager? = null
+    private var firingInitJob: Job? = null
     private var soundTimeoutJob: Job? = null
     private var vibrationTimeoutJob: Job? = null
+    private val firingStarted = AtomicBoolean(false)
+    private val actionHandled = AtomicBoolean(false)
     private lateinit var attributedContext: Context
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -57,7 +61,7 @@ class AlarmFiringService : Service() {
 
         when (intent?.action) {
             ACTION_DISMISS -> {
-                if (_isFiring.value) {
+                if (firingStarted.get() || _isFiring.value) {
                     dismissAlarm()
                 } else {
                     stopSelf()
@@ -65,7 +69,7 @@ class AlarmFiringService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_ACCEPT -> {
-                if (_isFiring.value) {
+                if (firingStarted.get() || _isFiring.value) {
                     acceptAlarm()
                 } else {
                     stopSelf()
@@ -74,13 +78,20 @@ class AlarmFiringService : Service() {
             }
         }
 
-        _isFiring.value = true
+        if (!firingStarted.compareAndSet(false, true)) {
+            return START_NOT_STICKY
+        }
 
-        scope.launch {
+        actionHandled.set(false)
+        currentHistoryId = -1L
+
+        firingInitJob = scope.launch {
             try {
                 val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
-                if (!cfg.isActive) {
-                    stopSelf()
+                if (!cfg.isActive || actionHandled.get()) {
+                    if (!actionHandled.get()) {
+                        stopSelf()
+                    }
                     return@launch
                 }
                 AlarmPreferences.setNextTriggerMillis(this@AlarmFiringService, null)
@@ -88,9 +99,12 @@ class AlarmFiringService : Service() {
                 currentHistoryId = AlarmHistoryDatabase.get(this@AlarmFiringService).dao()
                     .insert(AlarmHistoryEntry(status = "FIRED", initialTimeAloneSeconds = cfg.timeAloneSeconds))
 
+                if (actionHandled.get()) return@launch
+                _isFiring.value = true
+
                 showAlarmNotification()
 
-                if (cfg.vibrationEnabled) {
+                if (cfg.vibrationEnabled && !actionHandled.get()) {
                     startVibration()
                     vibrationTimeoutJob?.cancel()
                     vibrationTimeoutJob = scope.launch {
@@ -99,7 +113,7 @@ class AlarmFiringService : Service() {
                     }
                 }
 
-                if (cfg.soundEnabled) {
+                if (cfg.soundEnabled && !actionHandled.get()) {
                     startSound()
                     soundTimeoutJob?.cancel()
                     soundTimeoutJob = scope.launch {
@@ -166,7 +180,9 @@ class AlarmFiringService : Service() {
         nm.notify(NOTIF_ID_ALARM, notif)
     }
 
+    @Synchronized
     private fun startVibration() {
+        stopVibrationOnly()
         val vm = attributedContext.getSystemService(VibratorManager::class.java)
         vibratorManager = vm
         val effect = VibrationEffect.createWaveform(
@@ -180,7 +196,9 @@ class AlarmFiringService : Service() {
         vm.vibrate(combined, attrs)
     }
 
+    @Synchronized
     private fun startSound() {
+        stopSoundOnly()
         val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
@@ -207,10 +225,14 @@ class AlarmFiringService : Service() {
     }
 
     private fun dismissAlarm() {
+        if (!actionHandled.compareAndSet(false, true)) return
+        _isFiring.value = false
         stopAlarmSoundOnly()
         scope.launch {
             try {
-                updateHistory("DISMISSED")
+                firingInitJob?.join()
+                stopAlarmSoundOnly()
+                updateHistory(currentHistoryId, "DISMISSED")
                 val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
                 if (cfg.isActive) {
                     AlarmScheduler.schedule(this@AlarmFiringService, cfg)
@@ -222,14 +244,19 @@ class AlarmFiringService : Service() {
     }
 
     private fun acceptAlarm() {
+        if (!actionHandled.compareAndSet(false, true)) return
+        _isFiring.value = false
         stopAlarmSoundOnly()
         scope.launch {
             try {
+                firingInitJob?.join()
+                stopAlarmSoundOnly()
+                val historyId = currentHistoryId
                 val cfg = AlarmPreferences.configFlow(this@AlarmFiringService).first()
                 val intent = Intent(this@AlarmFiringService, TimerService::class.java).apply {
                     action = TimerService.ACTION_START
                     putExtra(TimerService.EXTRA_SECONDS, cfg.timeAloneSeconds)
-                    putExtra(TimerService.EXTRA_HISTORY_ID, currentHistoryId)
+                    putExtra(TimerService.EXTRA_HISTORY_ID, historyId)
                     putExtra(TimerService.EXTRA_ALMOST_DONE_SECONDS, cfg.almostDoneSeconds)
                 }
                 startForegroundService(intent)
@@ -274,25 +301,23 @@ class AlarmFiringService : Service() {
         nm.cancel(NOTIF_ID_ALARM)
     }
 
-    private suspend fun updateHistory(status: String) {
-        if (currentHistoryId == -1L) return
+    private suspend fun updateHistory(historyId: Long, status: String) {
+        if (historyId == -1L) return
         val db = AlarmHistoryDatabase.get(this)
-        db.dao().updateStatus(currentHistoryId, status)
+        db.dao().updateStatus(historyId, status)
     }
 
     override fun onDestroy() {
-        mediaPlayer?.let {
-            try {
-                it.setOnCompletionListener(null)
-                it.setOnErrorListener(null)
-                if (it.isPlaying) it.stop()
-                it.reset()
-                it.release()
-            } catch (_: Exception) {}
-        }
-        mediaPlayer = null
-        vibratorManager?.cancel()
-        vibratorManager = null
+        soundTimeoutJob?.cancel()
+        soundTimeoutJob = null
+        vibrationTimeoutJob?.cancel()
+        vibrationTimeoutJob = null
+        stopSoundOnly()
+        stopVibrationOnly()
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.cancel(NOTIF_ID_ALARM)
+        currentHistoryId = -1L
+        firingStarted.set(false)
         _isFiring.value = false
         scope.cancel()
         super.onDestroy()

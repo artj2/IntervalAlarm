@@ -33,6 +33,15 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private fun stopFiringAlarmIfNeeded() {
+        if (AlarmFiringService.isFiring.value) {
+            val intent = Intent(ctx, AlarmFiringService::class.java).apply {
+                action = AlarmFiringService.ACTION_DISMISS
+            }
+            ctx.startService(intent)
+        }
+    }
+
     fun saveAndToggleActive(
         minInterval: Int,
         maxInterval: Int,
@@ -52,6 +61,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                         overrideTodayDate = null
                     )
                 }
+                stopFiringAlarmIfNeeded()
             } else {
                 val todayStr = java.time.LocalDate.now(java.time.ZoneId.systemDefault()).toString()
                 val cfg = AlarmPreferences.update(ctx) {
@@ -102,6 +112,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         if (cfg.isActive) {
             AlarmScheduler.cancel(ctx, clearPreference = false)
             AlarmPreferences.setActive(ctx, false)
+            stopFiringAlarmIfNeeded()
         } else {
             if (cfg.windowMinutes < cfg.minIntervalMin) return
             val zone = java.time.ZoneId.systemDefault()
