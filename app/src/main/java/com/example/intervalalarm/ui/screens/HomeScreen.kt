@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
@@ -308,6 +309,7 @@ fun HomeScreen(vm: AlarmViewModel) {
                     scaleFactor = scaleFactor,
                     topPadding = sectionTopPadding,
                     bottomPadding = sectionBottomPadding,
+                    onPickTimeAlone = { vm.updateConfig { copy(timeAloneSeconds = it) } },
                     onStartForToday = { vm.startForToday() }
                 )
 
@@ -379,9 +381,12 @@ private fun NextAloneTimeSection(
     scaleFactor: Float,
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
+    onPickTimeAlone: (Long) -> Unit,
     onStartForToday: () -> Unit
 ) {
     val ctx = LocalContext.current
+    var showDurationDialog by remember { mutableStateOf(false) }
+    val hasScheduledTrigger = cfg.nextTriggerMillis != null && cfg.nextTriggerMillis > 0L
     val display = remember(cfg.nextTriggerMillis, nowMillis) {
         AlarmScheduler.getNextTriggerDisplay(ctx, cfg.nextTriggerMillis, nowMillis)
     }
@@ -453,7 +458,49 @@ private fun NextAloneTimeSection(
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                 )
             }
+            if (hasScheduledTrigger) {
+                Spacer(modifier = Modifier.height(8.dp * scaleFactor))
+                Surface(
+                    onClick = { showDurationDialog = true },
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.10f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(
+                            horizontal = (12.dp * scaleFactor).coerceIn(10.dp, 16.dp),
+                            vertical = (6.dp * scaleFactor).coerceIn(4.dp, 8.dp)
+                        ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.next_alone_duration,
+                                fmtCompactDuration(cfg.timeAloneSeconds)
+                            ),
+                            style = bodyStyle.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.label_time_alone),
+                            modifier = Modifier.size((15.dp * scaleFactor).coerceIn(13.dp, 18.dp)),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
         }
+    }
+    if (showDurationDialog) {
+        TimeAlonePickerDialog(
+            seconds = cfg.timeAloneSeconds,
+            onDismiss = { showDurationDialog = false },
+            onConfirm = {
+                onPickTimeAlone(it)
+                showDurationDialog = false
+            }
+        )
     }
     if (canStartForToday) {
         FilledTonalButton(
@@ -802,58 +849,75 @@ private fun DurationPickerCard(
             Text("%02d:%02d:%02d".format(h, m, s), style = textStyle)
         }
     }
-    // ... Dialog logic remains the same ...
     if (showDialog) {
-        var localH by remember { mutableStateOf(h.toString()) }
-        var localM by remember { mutableStateOf(m.toString()) }
-        var localS by remember { mutableStateOf(s.toString()) }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    val newH = localH.toLongOrNull() ?: 0L
-                    val newM = localM.toLongOrNull() ?: 0L
-                    val newS = localS.toLongOrNull() ?: 0L
-                    val total = (newH * 3600 + newM * 60 + newS).coerceIn(1L, 14400L)
-                    onPick(total)
-                    showDialog = false
-                }) { Text(stringResource(R.string.dialog_ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.dialog_cancel)) }
-            },
-            title = { Text(stringResource(R.string.label_time_alone)) },
-            text = {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = localH,
-                        onValueChange = { if (it.length <= 2) localH = it },
-                        label = { Text("H") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                    OutlinedTextField(
-                        value = localM,
-                        onValueChange = { if (it.length <= 2) localM = it },
-                        label = { Text("M") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                    OutlinedTextField(
-                        value = localS,
-                        onValueChange = { if (it.length <= 2) localS = it },
-                        label = { Text("S") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                }
+        TimeAlonePickerDialog(
+            seconds = seconds,
+            onDismiss = { showDialog = false },
+            onConfirm = {
+                onPick(it)
+                showDialog = false
             }
         )
     }
+}
+
+@Composable
+private fun TimeAlonePickerDialog(
+    seconds: Long,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit
+) {
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    val s = seconds % 60
+    var localH by remember { mutableStateOf(h.toString()) }
+    var localM by remember { mutableStateOf(m.toString()) }
+    var localS by remember { mutableStateOf(s.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                val newH = localH.toLongOrNull() ?: 0L
+                val newM = localM.toLongOrNull() ?: 0L
+                val newS = localS.toLongOrNull() ?: 0L
+                val total = (newH * 3600 + newM * 60 + newS).coerceIn(1L, 14400L)
+                onConfirm(total)
+            }) { Text(stringResource(R.string.dialog_ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        },
+        title = { Text(stringResource(R.string.label_time_alone)) },
+        text = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = localH,
+                    onValueChange = { if (it.length <= 2 && it.all { char -> char.isDigit() }) localH = it },
+                    label = { Text("H") },
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = localM,
+                    onValueChange = { if (it.length <= 2 && it.all { char -> char.isDigit() }) localM = it },
+                    label = { Text("M") },
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = localS,
+                    onValueChange = { if (it.length <= 2 && it.all { char -> char.isDigit() }) localS = it },
+                    label = { Text("S") },
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            }
+        }
+    )
 }
 
 @Composable
@@ -1019,3 +1083,14 @@ private fun IntervalField(
 
 private fun fmtTime(h: Int, m: Int): String =
     "%02d:%02d".format(h, m)
+
+private fun fmtCompactDuration(seconds: Long): String {
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    val s = seconds % 60
+    return buildList {
+        if (h > 0L) add("${h}h")
+        if (m > 0L) add("${m}m")
+        if (s > 0L || (h == 0L && m == 0L)) add("${s}s")
+    }.joinToString(" ")
+}
