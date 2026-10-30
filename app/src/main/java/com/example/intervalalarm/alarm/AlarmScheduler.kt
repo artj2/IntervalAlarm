@@ -107,16 +107,29 @@ object AlarmScheduler {
         }
 
         val am = ctx.getSystemService(AlarmManager::class.java)
+        val pendingIntent = makePendingIntent(ctx)
         if (am.canScheduleExactAlarms()) {
-            am.setExactAndAllowWhileIdle(
+            try {
+                am.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAt,
+                    pendingIntent
+                )
+            } catch (e: SecurityException) {
+                android.util.Log.w("AlarmScheduler", "Exact alarm blocked; falling back to inexact idle alarm", e)
+                am.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAt,
+                    pendingIntent
+                )
+            }
+        } else {
+            android.util.Log.w("AlarmScheduler", "Cannot schedule exact alarms; falling back to inexact idle alarm")
+            am.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 triggerAt,
-                makePendingIntent(ctx)
+                pendingIntent
             )
-        } else {
-            // Fallback or log warning. Since USE_EXACT_ALARM is in manifest,
-            // this usually shouldn't happen unless restricted by battery saver/system.
-            android.util.Log.w("AlarmScheduler", "Cannot schedule exact alarms")
         }
         AlarmPreferences.setActive(ctx, active = true, nextTriggerMillis = triggerAt)
         return triggerAt
