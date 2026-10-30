@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.example.intervalalarm.alarm.AlarmScheduler
+import com.example.intervalalarm.data.AlarmHistoryDatabase
 import com.example.intervalalarm.data.AlarmPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,15 @@ class BootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                val interruptedSession = AlarmPreferences.getTimerSession(ctx)
+                if (interruptedSession != null) {
+                    if (interruptedSession.historyId != -1L) {
+                        AlarmHistoryDatabase.get(ctx).dao()
+                            .updateStatus(interruptedSession.historyId, "INTERRUPTED")
+                    }
+                    AlarmPreferences.clearTimerSession(ctx)
+                }
+
                 val cfg = AlarmPreferences.configFlow(ctx).first()
                 if (cfg.isActive) {
                     AlarmScheduler.schedule(ctx, cfg)
