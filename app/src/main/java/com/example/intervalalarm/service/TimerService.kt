@@ -226,9 +226,11 @@ class TimerService : Service() {
     private fun showAlmostDoneNotification() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to_timer", true)
         }
         val pendingIntent = PendingIntent.getActivity(
-            this, 4, intent, PendingIntent.FLAG_IMMUTABLE
+            this, REQ_TAP_ALMOST_DONE, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notif = NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_TIMER_ALERTS)
@@ -305,23 +307,27 @@ class TimerService : Service() {
     private fun showDecisionNotification() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to_timer", true)
         }
         val pendingIntent = PendingIntent.getActivity(
-            this, 3, intent, PendingIntent.FLAG_IMMUTABLE
+            this, REQ_TAP_DECISION, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val failIntent = Intent(this, TimerService::class.java).apply {
             action = ACTION_FAILED
         }
         val failPendingIntent = PendingIntent.getService(
-            this, 10, failIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            this, REQ_ACTION_FAILED, failIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val successIntent = Intent(this, TimerService::class.java).apply {
             action = ACTION_SUCCESS
         }
         val successPendingIntent = PendingIntent.getService(
-            this, 11, successIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            this, REQ_ACTION_SUCCESS, successIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notif = NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_TIMER_ALERTS)
@@ -344,7 +350,8 @@ class TimerService : Service() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
-            this, 3, intent, PendingIntent.FLAG_IMMUTABLE
+            this, REQ_TAP_COMPLETED, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val title = if (isSuccess) getString(R.string.msg_congrats) else "Time Alone Failed"
@@ -515,9 +522,11 @@ class TimerService : Service() {
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to_timer", true)
         }
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent, PendingIntent.FLAG_IMMUTABLE
+            this, REQ_TAP_RUNNING, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         return NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_TIMER)
@@ -560,6 +569,12 @@ class TimerService : Service() {
         private const val NOTIF_ID = 9003
         private const val NOTIF_ID_ALERT = 9004
         private const val NOTIF_ID_ALMOST_DONE = 9005
+        private const val REQ_TAP_RUNNING = 200
+        private const val REQ_TAP_ALMOST_DONE = 201
+        private const val REQ_TAP_DECISION = 202
+        private const val REQ_TAP_COMPLETED = 203
+        private const val REQ_ACTION_FAILED = 210
+        private const val REQ_ACTION_SUCCESS = 211
 
         private val _remainingSeconds = MutableStateFlow(0L)
         val remainingSeconds = _remainingSeconds.asStateFlow()
