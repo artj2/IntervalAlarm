@@ -53,11 +53,7 @@ class TimerService : Service() {
                 startTimer(initialSeconds, historyId, almostDoneSeconds)
             }
             ACTION_FAILED -> {
-                if (_isFinished.value) {
-                    finalActionFailure()
-                } else {
-                    failTimerEarly()
-                }
+                handleFailureAction()
             }
             ACTION_SUCCESS -> {
                 finalActionSuccess()
@@ -367,17 +363,52 @@ class TimerService : Service() {
         nm.notify(NOTIF_ID_ALERT, notif)
     }
 
-    private suspend fun resolveSessionSnapshot(localHistoryId: Long, localInitial: Long): Pair<Long, Long> {
-        var histId = localHistoryId
-        var initSec = localInitial
-        if (histId == -1L || initSec <= 0L) {
-            val session = AlarmPreferences.getTimerSession(this@TimerService)
-            if (session != null) {
-                if (histId == -1L) histId = session.historyId
-                if (initSec <= 0L) initSec = session.initialSeconds
+    private data class ResolvedSession(
+        val historyId: Long,
+        val initialSeconds: Long,
+        val elapsedSeconds: Long,
+        val wasFinished: Boolean
+    )
+
+    private suspend fun resolveActiveSession(
+        localHistoryId: Long,
+        localInitial: Long,
+        localRemaining: Long,
+        localWasFinished: Boolean
+    ): ResolvedSession? {
+        if (localHistoryId != -1L && localInitial > 0L) {
+            val elapsed = if (localWasFinished) {
+                localInitial
+            } else {
+                (localInitial - localRemaining).coerceIn(0L, localInitial)
             }
+            return ResolvedSession(
+                historyId = localHistoryId,
+                initialSeconds = localInitial,
+                elapsedSeconds = elapsed,
+                wasFinished = localWasFinished
+            )
         }
-        return histId to initSec
+
+        val persisted = AlarmPreferences.getTimerSession(this@TimerService) ?: return null
+        val now = System.currentTimeMillis()
+        val wasFinished = persisted.decisionEndEpochMillis > 0L || persisted.endEpochMillis <= now
+        val remSec = if (wasFinished) {
+            0L
+        } else {
+            ((persisted.endEpochMillis - now + 999L) / 1000L).coerceAtLeast(0L)
+        }
+        val elapsed = if (wasFinished) {
+            persisted.initialSeconds
+        } else {
+            (persisted.initialSeconds - remSec).coerceIn(0L, persisted.initialSeconds)
+        }
+        return ResolvedSession(
+            historyId = persisted.historyId,
+            initialSeconds = persisted.initialSeconds,
+            elapsedSeconds = elapsed,
+            wasFinished = wasFinished
+        )
     }
 
     private fun finalActionSuccess() {
@@ -385,15 +416,31 @@ class TimerService : Service() {
         val token = activeSessionToken.get()
         val localHistoryId = currentHistoryId
         val localInitial = _initialSeconds.value
+        val localRemaining = _remainingSeconds.value
+        val localWasFinished = _isFinished.value
         timerJob?.cancel()
         decisionJob?.cancel()
+        currentHistoryId = -1L
+        _initialSeconds.value = 0L
         _remainingSeconds.value = 0L
         _isFinished.value = false
         releaseWakeLock()
         scope.launch {
             sessionMutex.withLock {
-                val (histId, initSec) = resolveSessionSnapshot(localHistoryId, localInitial)
-                updateHistory(histId, "SUCCESS", initSec)
+                val resolved = resolveActiveSession(
+                    localHistoryId = localHistoryId,
+                    localInitial = localInitial,
+                    localRemaining = localRemaining,
+                    localWasFinished = localWasFinished
+                )
+                if (resolved == null) {
+                    if (activeSessionToken.get() == token) {
+                        getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID_ALERT)
+                        stopSelf()
+                    }
+                    return@withLock
+                }
+                updateHistory(resolved.historyId, "SUCCESS", resolved.initialSeconds)
                 AlarmPreferences.updateTimeAlone(this@TimerService, true)
                 if (activeSessionToken.get() == token) {
                     AlarmPreferences.clearTimerSession(this@TimerService)
@@ -405,51 +452,43 @@ class TimerService : Service() {
         }
     }
 
-    private fun finalActionFailure() {
-        if (!outcomeHandled.compareAndSet(false, true)) return
-        val token = activeSessionToken.get()
-        val localHistoryId = currentHistoryId
-        val localInitial = _initialSeconds.value
-        timerJob?.cancel()
-        decisionJob?.cancel()
-        _remainingSeconds.value = 0L
-        _isFinished.value = false
-        releaseWakeLock()
-        scope.launch {
-            sessionMutex.withLock {
-                val (histId, initSec) = resolveSessionSnapshot(localHistoryId, localInitial)
-                updateHistory(histId, "FAILED", initSec)
-                AlarmPreferences.updateTimeAlone(this@TimerService, false)
-                if (activeSessionToken.get() == token) {
-                    AlarmPreferences.clearTimerSession(this@TimerService)
-                    resumeIntervals()
-                    showCompletionNotification(false)
-                    stopSelf()
-                }
-            }
-        }
-    }
-
-    private fun failTimerEarly() {
+    private fun handleFailureAction() {
         if (!outcomeHandled.compareAndSet(false, true)) return
         val token = activeSessionToken.get()
         val localHistoryId = currentHistoryId
         val localInitial = _initialSeconds.value
         val localRemaining = _remainingSeconds.value
+        val localWasFinished = _isFinished.value
         timerJob?.cancel()
         decisionJob?.cancel()
+        currentHistoryId = -1L
+        _initialSeconds.value = 0L
         _remainingSeconds.value = 0L
         _isFinished.value = false
         releaseWakeLock()
         scope.launch {
             sessionMutex.withLock {
-                val (histId, initSec) = resolveSessionSnapshot(localHistoryId, localInitial)
-                val elapsed = (initSec - localRemaining).coerceAtLeast(0L)
-                updateHistory(histId, "FAILED", elapsed)
+                val resolved = resolveActiveSession(
+                    localHistoryId = localHistoryId,
+                    localInitial = localInitial,
+                    localRemaining = localRemaining,
+                    localWasFinished = localWasFinished
+                )
+                if (resolved == null) {
+                    if (activeSessionToken.get() == token) {
+                        getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID_ALERT)
+                        stopSelf()
+                    }
+                    return@withLock
+                }
+                updateHistory(resolved.historyId, "FAILED", resolved.elapsedSeconds)
                 AlarmPreferences.updateTimeAlone(this@TimerService, false)
                 if (activeSessionToken.get() == token) {
                     AlarmPreferences.clearTimerSession(this@TimerService)
                     resumeIntervals()
+                    if (resolved.wasFinished) {
+                        showCompletionNotification(false)
+                    }
                     stopSelf()
                 }
             }
@@ -504,8 +543,10 @@ class TimerService : Service() {
         scope.cancel()
         val nm = getSystemService(NotificationManager::class.java)
         nm.cancel(NOTIF_ID_ALMOST_DONE)
+        currentHistoryId = -1L
+        _initialSeconds.value = 0L
         _isFinished.value = false
-        _remainingSeconds.value = 0
+        _remainingSeconds.value = 0L
         super.onDestroy()
     }
 
