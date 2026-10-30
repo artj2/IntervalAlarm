@@ -40,6 +40,7 @@
     <string name="dialog_clear_title">Clear History</string>
     <string name="dialog_clear_msg">Delete all alarm history entries? This cannot be undone.</string>
     <string name="btn_clear">Clear</string>
+    <string name="history_status_interrupted">Interrupted</string>
 
     <!-- Alarm Firing -->
     <string name="notif_firing_title">Alarm firing…</string>

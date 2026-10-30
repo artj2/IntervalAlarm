@@ -114,6 +114,7 @@ private fun HistoryItem(entry: AlarmHistoryEntry) {
 
     val statusDetails = when (entry.status) {
         "DISMISSED" -> "Dismissed"
+        "INTERRUPTED" -> stringResource(R.string.history_status_interrupted)
         "SUCCESS" -> "Success — ${fmtSeconds(entry.initialTimeAloneSeconds)}"
         "FAILED" -> "Failed — ${fmtSeconds(entry.elapsedTimeSeconds)} of ${fmtSeconds(entry.initialTimeAloneSeconds)}"
         else -> "Fired"
