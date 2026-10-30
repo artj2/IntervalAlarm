@@ -133,28 +133,28 @@ class AlarmFiringService : Service() {
 
     private fun showAlarmNotification() {
         val tapIntent = PendingIntent.getActivity(
-            this, 0,
+            this, REQ_TAP_ALARM,
             Intent(this, MainActivity::class.java).apply {
                 putExtra("navigate_to_timer", true)
             },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val dismissIntent = PendingIntent.getService(
-            this, 1,
+            this, REQ_DISMISS_ALARM,
             Intent(this, AlarmFiringService::class.java).apply {
                 action = ACTION_DISMISS
             },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val acceptIntent = PendingIntent.getActivity(
-            this, 2,
+            this, REQ_ACCEPT_ALARM,
             Intent(this, MainActivity::class.java).apply {
                 action = ACTION_ACCEPT_FROM_NOTIF
                 putExtra("navigate_to_timer", true)
             },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notif = NotificationCompat.Builder(this, IntervalAlarmApp.CHANNEL_ALARM)
@@ -329,6 +329,9 @@ class AlarmFiringService : Service() {
         const val ACTION_ACCEPT_FROM_NOTIF = "com.example.intervalalarm.ACTION_ACCEPT_FROM_NOTIF"
         private const val NOTIF_ID_SERVICE = 9001
         private const val NOTIF_ID_ALARM = 9002
+        private const val REQ_TAP_ALARM = 100
+        private const val REQ_DISMISS_ALARM = 101
+        private const val REQ_ACCEPT_ALARM = 102
 
         private var currentHistoryId: Long = -1L
 
