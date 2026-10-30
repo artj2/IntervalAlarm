@@ -66,6 +66,7 @@
     <string name="btn_view_settings">View Settings</string>
     <string name="btn_hide_settings">Hide Settings</string>
     <string name="section_next_alone_time">Next Alone Time</string>
+    <string name="next_alone_duration">Duration: %1$s</string>
     <string name="next_none_scheduled">None scheduled</string>
     <string name="next_due_now">Due now</string>
     <string name="next_less_than_min">in less than a minute</string>
