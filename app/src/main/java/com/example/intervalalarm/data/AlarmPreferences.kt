@@ -148,9 +148,23 @@ object AlarmPreferences {
         ctx.dataStore.edit { p ->
             val current = p[TIME_ALONE] ?: 60L
             if (newSeconds == current) return@edit
-            p[PREVIOUS_TIME_ALONE] = current
+
+            val existingPrevious = p[PREVIOUS_TIME_ALONE]?.takeIf { it > 0L }
+            val wasReverted = p[TIME_ALONE_REVERTED] ?: false
+            val anchor = when {
+                wasReverted -> current
+                existingPrevious != null -> existingPrevious
+                else -> current
+            }
+
             p[TIME_ALONE] = newSeconds
-            p[TIME_ALONE_REVERTED] = false
+            if (newSeconds == anchor) {
+                p.remove(PREVIOUS_TIME_ALONE)
+                p.remove(TIME_ALONE_REVERTED)
+            } else {
+                p[PREVIOUS_TIME_ALONE] = anchor
+                p[TIME_ALONE_REVERTED] = false
+            }
         }
     }
 
