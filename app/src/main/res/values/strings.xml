@@ -39,6 +39,11 @@
     <string name="btn_clear_all">Clear All</string>
     <string name="dialog_clear_title">Clear History</string>
     <string name="dialog_clear_msg">Delete all alarm history entries? This cannot be undone.</string>
+    <string name="clear_option_keep_today">Keep today\'s logs</string>
+    <string name="clear_option_keep_7_days">Keep last 7 days</string>
+    <string name="clear_option_keep_30_days">Keep last 30 days</string>
+    <string name="clear_option_clear_all">Clear all logs</string>
+    <string name="dialog_clear_none_to_delete">No logs older than the selected range.</string>
     <string name="btn_clear">Clear</string>
     <string name="history_status_interrupted">Interrupted</string>
 
@@ -84,5 +89,9 @@
     <plurals name="alarms_logged">
         <item quantity="one">%1$d alarm logged</item>
         <item quantity="other">%1$d alarms logged</item>
+    </plurals>
+    <plurals name="dialog_clear_preview">
+        <item quantity="one">Will delete %1$d of %2$d log. This cannot be undone.</item>
+        <item quantity="other">Will delete %1$d of %2$d logs. This cannot be undone.</item>
     </plurals>
 </resources>

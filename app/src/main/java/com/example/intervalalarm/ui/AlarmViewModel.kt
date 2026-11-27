@@ -212,6 +212,10 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun clearHistoryBefore(cutoffMillis: Long) {
+        viewModelScope.launch { historyDao.deleteBefore(cutoffMillis) }
+    }
+
     fun clearHistory() {
         viewModelScope.launch { historyDao.clearAll() }
     }
