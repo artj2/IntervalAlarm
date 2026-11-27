@@ -34,6 +34,9 @@ object AlarmPreferences {
     private val IS_ACTIVE = booleanPreferencesKey("is_active")
     private val REPEAT_DAYS = stringPreferencesKey("repeat_days")
     private val TIME_ALONE = longPreferencesKey("time_alone")
+    private val PREVIOUS_TIME_ALONE = longPreferencesKey("previous_time_alone")
+    private val TIME_ALONE_REVERTED = booleanPreferencesKey("time_alone_reverted")
+    private val TIME_ALONE_UNDO_FROM_MANUAL = booleanPreferencesKey("time_alone_undo_from_manual")
     private val ADJUSTMENT_PERCENT = intPreferencesKey("adjustment_percent")
     private val ALMOST_DONE_SECONDS = longPreferencesKey("almost_done_seconds")
     private val NEXT_TRIGGER_MILLIS = longPreferencesKey("next_trigger_millis")
@@ -65,6 +68,8 @@ object AlarmPreferences {
                 ?.toSet()
                 ?: emptySet(),
             timeAloneSeconds = p[TIME_ALONE] ?: 60L,
+            previousTimeAloneSeconds = p[PREVIOUS_TIME_ALONE]?.takeIf { it > 0L },
+            isTimeAloneReverted = p[TIME_ALONE_REVERTED] ?: false,
             adjustmentPercent = p[ADJUSTMENT_PERCENT] ?: 10,
             almostDoneSeconds = p[ALMOST_DONE_SECONDS] ?: 60L,
             nextTriggerMillis = p[NEXT_TRIGGER_MILLIS]?.takeIf { it > 0L },
@@ -85,6 +90,14 @@ object AlarmPreferences {
         p[IS_ACTIVE] = cfg.isActive
         p[REPEAT_DAYS] = cfg.repeatDays.joinToString(",")
         p[TIME_ALONE] = cfg.timeAloneSeconds
+        if (cfg.previousTimeAloneSeconds != null && cfg.previousTimeAloneSeconds > 0L) {
+            p[PREVIOUS_TIME_ALONE] = cfg.previousTimeAloneSeconds
+            p[TIME_ALONE_REVERTED] = cfg.isTimeAloneReverted
+        } else {
+            p.remove(PREVIOUS_TIME_ALONE)
+            p.remove(TIME_ALONE_REVERTED)
+            p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
+        }
         p[ADJUSTMENT_PERCENT] = cfg.adjustmentPercent
         p[ALMOST_DONE_SECONDS] = cfg.almostDoneSeconds
         if (cfg.nextTriggerMillis != null && cfg.nextTriggerMillis > 0L) {
@@ -121,7 +134,69 @@ object AlarmPreferences {
         ctx.dataStore.edit { p ->
             val current = p[TIME_ALONE] ?: 60L
             val pct = p[ADJUSTMENT_PERCENT] ?: 10
-            p[TIME_ALONE] = calculateAdjustedTimeAlone(current, pct, isSuccess)
+            val updated = calculateAdjustedTimeAlone(current, pct, isSuccess)
+            p[TIME_ALONE] = updated
+            if (updated != current) {
+                p[PREVIOUS_TIME_ALONE] = current
+                p[TIME_ALONE_REVERTED] = false
+                p[TIME_ALONE_UNDO_FROM_MANUAL] = false
+            } else {
+                p.remove(PREVIOUS_TIME_ALONE)
+                p.remove(TIME_ALONE_REVERTED)
+                p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
+            }
+        }
+    }
+
+    suspend fun setTimeAloneSeconds(ctx: Context, newSeconds: Long) {
+        ctx.dataStore.edit { p ->
+            val current = p[TIME_ALONE] ?: 60L
+            if (newSeconds == current) return@edit
+
+            val existingPrevious = p[PREVIOUS_TIME_ALONE]?.takeIf { it > 0L }
+            val wasReverted = p[TIME_ALONE_REVERTED] ?: false
+            val fromManual = p[TIME_ALONE_UNDO_FROM_MANUAL] ?: false
+            val anchor = when {
+                wasReverted -> current
+                fromManual && existingPrevious != null -> existingPrevious
+                else -> current
+            }
+
+            p[TIME_ALONE] = newSeconds
+            if (newSeconds == anchor) {
+                p.remove(PREVIOUS_TIME_ALONE)
+                p.remove(TIME_ALONE_REVERTED)
+                p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
+            } else {
+                p[PREVIOUS_TIME_ALONE] = anchor
+                p[TIME_ALONE_REVERTED] = false
+                p[TIME_ALONE_UNDO_FROM_MANUAL] = true
+            }
+        }
+    }
+
+    suspend fun togglePreviousTimeAlone(ctx: Context) {
+        ctx.dataStore.edit { p ->
+            val current = p[TIME_ALONE] ?: 60L
+            val previous = p[PREVIOUS_TIME_ALONE]?.takeIf { it > 0L } ?: return@edit
+            if (previous == current) {
+                p.remove(PREVIOUS_TIME_ALONE)
+                p.remove(TIME_ALONE_REVERTED)
+                p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
+                return@edit
+            }
+            val wasReverted = p[TIME_ALONE_REVERTED] ?: false
+            p[TIME_ALONE] = previous
+            p[PREVIOUS_TIME_ALONE] = current
+            p[TIME_ALONE_REVERTED] = !wasReverted
+        }
+    }
+
+    suspend fun clearTimeAloneUndo(ctx: Context) {
+        ctx.dataStore.edit { p ->
+            p.remove(PREVIOUS_TIME_ALONE)
+            p.remove(TIME_ALONE_REVERTED)
+            p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
         }
     }
 

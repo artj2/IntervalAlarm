@@ -59,6 +59,8 @@
     <string name="msg_defaulting_success">Defaulting to Success…</string>
     <string name="notif_timer_complete_text">Target time reached! Defaulting to Success in 10s…</string>
     <string name="label_time_alone">Time Alone</string>
+    <string name="cd_undo_time_alone">Revert to previous Time Alone</string>
+    <string name="cd_redo_time_alone">Restore current Time Alone</string>
     <string name="label_adjustment">Adjustment (%)</string>
     <string name="section_almost_done">Almost Done Alert</string>
     <string name="notif_almost_done_text">Almost Done</string>

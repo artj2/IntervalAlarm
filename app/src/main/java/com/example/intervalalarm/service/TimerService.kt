@@ -115,6 +115,7 @@ class TimerService : Service() {
         scope.launch {
             sessionMutex.withLock {
                 if (activeSessionToken.get() == token) {
+                    AlarmPreferences.clearTimeAloneUndo(this@TimerService)
                     AlarmPreferences.saveTimerSession(
                         this@TimerService,
                         PersistedTimerSession(

@@ -8,6 +8,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -309,7 +311,8 @@ fun HomeScreen(vm: AlarmViewModel) {
                     scaleFactor = scaleFactor,
                     topPadding = sectionTopPadding,
                     bottomPadding = sectionBottomPadding,
-                    onPickTimeAlone = { vm.updateConfig { copy(timeAloneSeconds = it) } },
+                    onPickTimeAlone = { vm.setTimeAloneSeconds(it) },
+                    onTogglePreviousTimeAlone = { vm.togglePreviousTimeAlone() },
                     onStartForToday = { vm.startForToday() }
                 )
 
@@ -382,6 +385,7 @@ private fun NextAloneTimeSection(
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
     onPickTimeAlone: (Long) -> Unit,
+    onTogglePreviousTimeAlone: () -> Unit,
     onStartForToday: () -> Unit
 ) {
     val ctx = LocalContext.current
@@ -460,33 +464,68 @@ private fun NextAloneTimeSection(
             }
             if (hasScheduledTrigger) {
                 Spacer(modifier = Modifier.height(8.dp * scaleFactor))
-                Surface(
-                    onClick = { showDurationDialog = true },
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.10f)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(
-                            horizontal = (12.dp * scaleFactor).coerceIn(10.dp, 16.dp),
-                            vertical = (6.dp * scaleFactor).coerceIn(4.dp, 8.dp)
-                        ),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    Surface(
+                        onClick = { showDurationDialog = true },
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.10f)
                     ) {
-                        Text(
-                            text = stringResource(
-                                R.string.next_alone_duration,
-                                fmtCompactDuration(cfg.timeAloneSeconds)
+                        Row(
+                            modifier = Modifier.padding(
+                                horizontal = (12.dp * scaleFactor).coerceIn(10.dp, 16.dp),
+                                vertical = (6.dp * scaleFactor).coerceIn(4.dp, 8.dp)
                             ),
-                            style = bodyStyle.copy(fontWeight = FontWeight.Medium),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = stringResource(R.string.label_time_alone),
-                            modifier = Modifier.size((15.dp * scaleFactor).coerceIn(13.dp, 18.dp)),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        )
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    R.string.next_alone_duration,
+                                    fmtCompactDuration(cfg.timeAloneSeconds)
+                                ),
+                                style = bodyStyle.copy(fontWeight = FontWeight.Medium),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.label_time_alone),
+                                modifier = Modifier.size((15.dp * scaleFactor).coerceIn(13.dp, 18.dp)),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                    val canTogglePrev = cfg.previousTimeAloneSeconds != null &&
+                        cfg.previousTimeAloneSeconds != cfg.timeAloneSeconds
+                    if (canTogglePrev) {
+                        Surface(
+                            onClick = onTogglePreviousTimeAlone,
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.10f)
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(
+                                    horizontal = (8.dp * scaleFactor).coerceIn(6.dp, 12.dp),
+                                    vertical = (6.dp * scaleFactor).coerceIn(4.dp, 8.dp)
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (cfg.isTimeAloneReverted) {
+                                        Icons.AutoMirrored.Filled.Redo
+                                    } else {
+                                        Icons.AutoMirrored.Filled.Undo
+                                    },
+                                    contentDescription = stringResource(
+                                        if (cfg.isTimeAloneReverted) R.string.cd_redo_time_alone else R.string.cd_undo_time_alone
+                                    ),
+                                    modifier = Modifier.size((18.dp * scaleFactor).coerceIn(16.dp, 22.dp)),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -568,13 +607,41 @@ private fun TimeAloneSection(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = topPadding, bottom = bottomPadding),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            stringResource(R.string.label_time_alone),
-            style = headerStyle,
-            modifier = Modifier.weight(1.5f)
-        )
+        Row(
+            modifier = Modifier.weight(1.5f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                stringResource(R.string.label_time_alone),
+                style = headerStyle
+            )
+            val canTogglePrev = enabled &&
+                cfg.previousTimeAloneSeconds != null &&
+                cfg.previousTimeAloneSeconds != cfg.timeAloneSeconds
+            if (canTogglePrev) {
+                IconButton(
+                    onClick = { vm.togglePreviousTimeAlone() },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = if (cfg.isTimeAloneReverted) {
+                            Icons.AutoMirrored.Filled.Redo
+                        } else {
+                            Icons.AutoMirrored.Filled.Undo
+                        },
+                        contentDescription = stringResource(
+                            if (cfg.isTimeAloneReverted) R.string.cd_redo_time_alone else R.string.cd_undo_time_alone
+                        ),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
         Text(
             stringResource(R.string.label_adjustment),
             style = headerStyle,
@@ -588,7 +655,7 @@ private fun TimeAloneSection(
     ) {
         DurationPickerCard(
             seconds = cfg.timeAloneSeconds, enabled = enabled, textStyle = largeStyle,
-            onPick = { vm.updateConfig { copy(timeAloneSeconds = it) } },
+            onPick = { vm.setTimeAloneSeconds(it) },
             modifier = Modifier.weight(1.5f)
         )
         IntervalField(
