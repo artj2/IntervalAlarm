@@ -14,6 +14,8 @@ data class AlarmConfig(
     val isActive: Boolean = false,
     val repeatDays: Set<Int> = emptySet(),
     val timeAloneSeconds: Long = 60L,
+    val previousTimeAloneSeconds: Long? = null,
+    val isTimeAloneReverted: Boolean = false,
     val adjustmentPercent: Int = 10,
     val almostDoneSeconds: Long = 60L,
     val nextTriggerMillis: Long? = null,
