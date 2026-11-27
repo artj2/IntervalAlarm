@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.intervalalarm"
         minSdk = 35
         targetSdk = 36
-        versionCode = 29
-        versionName = "0.6.0"
+        versionCode = 30
+        versionName = "0.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
