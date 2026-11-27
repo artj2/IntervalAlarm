@@ -188,6 +188,14 @@ object AlarmScheduler {
         return NextTriggerDisplay(timeText = timeText, countdownText = countdownText)
     }
 
+    fun hasPendingAlarm(ctx: Context): Boolean {
+        val intent = Intent(ctx, AlarmReceiver::class.java)
+        return PendingIntent.getBroadcast(
+            ctx, REQ_CODE, intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        ) != null
+    }
+
     private fun makePendingIntent(ctx: Context): PendingIntent {
         val intent = Intent(ctx, AlarmReceiver::class.java)
         return PendingIntent.getBroadcast(

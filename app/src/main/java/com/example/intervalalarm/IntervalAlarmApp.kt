@@ -3,6 +3,11 @@ package com.example.intervalalarm
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import com.example.intervalalarm.alarm.AlarmScheduler
+import com.example.intervalalarm.data.AlarmPreferences
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import java.io.File
 
 class IntervalAlarmApp : Application() {
 
@@ -15,6 +20,7 @@ class IntervalAlarmApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        sanitizeRestoredStateIfNeeded()
         val nm = getSystemService(NotificationManager::class.java)
 
         nm.createNotificationChannel(
@@ -61,5 +67,26 @@ class IntervalAlarmApp : Application() {
                 vibrationPattern = longArrayOf(0, 300)
             }
         )
+    }
+
+    private fun sanitizeRestoredStateIfNeeded() {
+        val sentinel = File(noBackupFilesDir, ".install_initialized")
+        if (sentinel.exists()) return
+
+        val prefsFile = File(filesDir, "datastore/alarm_prefs.preferences_pb")
+        try {
+            if (prefsFile.exists()) {
+                runBlocking(Dispatchers.IO) {
+                    AlarmPreferences.sanitizeTransientState(
+                        ctx = this@IntervalAlarmApp,
+                        clearScheduleState = !AlarmScheduler.hasPendingAlarm(this@IntervalAlarmApp)
+                    )
+                }
+            }
+            sentinel.parentFile?.mkdirs()
+            sentinel.createNewFile()
+        } catch (e: Exception) {
+            android.util.Log.w("IntervalAlarmApp", "Failed to sanitize restored state", e)
+        }
     }
 }
