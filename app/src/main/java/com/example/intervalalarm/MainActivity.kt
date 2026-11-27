@@ -91,12 +91,14 @@ private fun AppContent(
         val currentIntent = pendingIntent ?: return@LaunchedEffect
         val action = currentIntent.action
         val navToTimer = currentIntent.getBooleanExtra("navigate_to_timer", false)
+        val acceptToken = currentIntent.getStringExtra(AlarmFiringService.EXTRA_ACCEPT_TOKEN)
         currentIntent.action = null
         currentIntent.removeExtra("navigate_to_timer")
+        currentIntent.removeExtra(AlarmFiringService.EXTRA_ACCEPT_TOKEN)
         onIntentConsumed()
 
         if (action == AlarmFiringService.ACTION_ACCEPT_FROM_NOTIF) {
-            if (AlarmFiringService.isFiring.value) {
+            if (AlarmFiringService.isFiring.value && AlarmFiringService.isValidAcceptToken(acceptToken)) {
                 val startIntent = Intent(ctx, AlarmFiringService::class.java).apply {
                     this.action = AlarmFiringService.ACTION_ACCEPT
                 }

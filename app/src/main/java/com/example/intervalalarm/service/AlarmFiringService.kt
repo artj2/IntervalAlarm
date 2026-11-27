@@ -153,6 +153,7 @@ class AlarmFiringService : Service() {
             Intent(this, MainActivity::class.java).apply {
                 action = ACTION_ACCEPT_FROM_NOTIF
                 putExtra("navigate_to_timer", true)
+                putExtra(EXTRA_ACCEPT_TOKEN, acceptNotifToken)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -327,15 +328,20 @@ class AlarmFiringService : Service() {
         const val ACTION_DISMISS = "com.example.intervalalarm.DISMISS_ALARM"
         const val ACTION_ACCEPT = "com.example.intervalalarm.ACCEPT_ALARM"
         const val ACTION_ACCEPT_FROM_NOTIF = "com.example.intervalalarm.ACTION_ACCEPT_FROM_NOTIF"
+        const val EXTRA_ACCEPT_TOKEN = "extra_accept_token"
         private const val NOTIF_ID_SERVICE = 9001
         private const val NOTIF_ID_ALARM = 9002
         private const val REQ_TAP_ALARM = 100
         private const val REQ_DISMISS_ALARM = 101
         private const val REQ_ACCEPT_ALARM = 102
 
+        private val acceptNotifToken: String = java.util.UUID.randomUUID().toString()
         private var currentHistoryId: Long = -1L
 
         private val _isFiring = MutableStateFlow(false)
         val isFiring = _isFiring.asStateFlow()
+
+        fun isValidAcceptToken(token: String?): Boolean =
+            token != null && token == acceptNotifToken
     }
 }
