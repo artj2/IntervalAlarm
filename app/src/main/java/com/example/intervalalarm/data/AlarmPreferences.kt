@@ -265,14 +265,29 @@ object AlarmPreferences {
         )
     }
 
+    private fun clearSessionKeys(p: MutablePreferences) {
+        p.remove(SESSION_END_EPOCH)
+        p.remove(SESSION_INITIAL_SEC)
+        p.remove(SESSION_HISTORY_ID)
+        p.remove(SESSION_ALMOST_DONE_SEC)
+        p.remove(SESSION_ALMOST_DONE_SHOWN)
+        p.remove(SESSION_DECISION_END_EPOCH)
+    }
+
     suspend fun clearTimerSession(ctx: Context) {
         ctx.dataStore.edit { p ->
-            p.remove(SESSION_END_EPOCH)
-            p.remove(SESSION_INITIAL_SEC)
-            p.remove(SESSION_HISTORY_ID)
-            p.remove(SESSION_ALMOST_DONE_SEC)
-            p.remove(SESSION_ALMOST_DONE_SHOWN)
-            p.remove(SESSION_DECISION_END_EPOCH)
+            clearSessionKeys(p)
+        }
+    }
+
+    suspend fun sanitizeTransientState(ctx: Context, clearScheduleState: Boolean) {
+        ctx.dataStore.edit { p ->
+            clearSessionKeys(p)
+            if (clearScheduleState) {
+                p[IS_ACTIVE] = false
+                p.remove(NEXT_TRIGGER_MILLIS)
+                p.remove(OVERRIDE_TODAY_DATE)
+            }
         }
     }
 }
