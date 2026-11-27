@@ -36,6 +36,7 @@ object AlarmPreferences {
     private val TIME_ALONE = longPreferencesKey("time_alone")
     private val PREVIOUS_TIME_ALONE = longPreferencesKey("previous_time_alone")
     private val TIME_ALONE_REVERTED = booleanPreferencesKey("time_alone_reverted")
+    private val TIME_ALONE_UNDO_FROM_MANUAL = booleanPreferencesKey("time_alone_undo_from_manual")
     private val ADJUSTMENT_PERCENT = intPreferencesKey("adjustment_percent")
     private val ALMOST_DONE_SECONDS = longPreferencesKey("almost_done_seconds")
     private val NEXT_TRIGGER_MILLIS = longPreferencesKey("next_trigger_millis")
@@ -95,6 +96,7 @@ object AlarmPreferences {
         } else {
             p.remove(PREVIOUS_TIME_ALONE)
             p.remove(TIME_ALONE_REVERTED)
+            p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
         }
         p[ADJUSTMENT_PERCENT] = cfg.adjustmentPercent
         p[ALMOST_DONE_SECONDS] = cfg.almostDoneSeconds
@@ -137,9 +139,11 @@ object AlarmPreferences {
             if (updated != current) {
                 p[PREVIOUS_TIME_ALONE] = current
                 p[TIME_ALONE_REVERTED] = false
+                p[TIME_ALONE_UNDO_FROM_MANUAL] = false
             } else {
                 p.remove(PREVIOUS_TIME_ALONE)
                 p.remove(TIME_ALONE_REVERTED)
+                p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
             }
         }
     }
@@ -151,9 +155,10 @@ object AlarmPreferences {
 
             val existingPrevious = p[PREVIOUS_TIME_ALONE]?.takeIf { it > 0L }
             val wasReverted = p[TIME_ALONE_REVERTED] ?: false
+            val fromManual = p[TIME_ALONE_UNDO_FROM_MANUAL] ?: false
             val anchor = when {
                 wasReverted -> current
-                existingPrevious != null -> existingPrevious
+                fromManual && existingPrevious != null -> existingPrevious
                 else -> current
             }
 
@@ -161,9 +166,11 @@ object AlarmPreferences {
             if (newSeconds == anchor) {
                 p.remove(PREVIOUS_TIME_ALONE)
                 p.remove(TIME_ALONE_REVERTED)
+                p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
             } else {
                 p[PREVIOUS_TIME_ALONE] = anchor
                 p[TIME_ALONE_REVERTED] = false
+                p[TIME_ALONE_UNDO_FROM_MANUAL] = true
             }
         }
     }
@@ -175,6 +182,7 @@ object AlarmPreferences {
             if (previous == current) {
                 p.remove(PREVIOUS_TIME_ALONE)
                 p.remove(TIME_ALONE_REVERTED)
+                p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
                 return@edit
             }
             val wasReverted = p[TIME_ALONE_REVERTED] ?: false
@@ -188,6 +196,7 @@ object AlarmPreferences {
         ctx.dataStore.edit { p ->
             p.remove(PREVIOUS_TIME_ALONE)
             p.remove(TIME_ALONE_REVERTED)
+            p.remove(TIME_ALONE_UNDO_FROM_MANUAL)
         }
     }
 
