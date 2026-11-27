@@ -33,6 +33,18 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun setTimeAloneSeconds(seconds: Long) {
+        viewModelScope.launch {
+            AlarmPreferences.setTimeAloneSeconds(ctx, seconds)
+        }
+    }
+
+    fun togglePreviousTimeAlone() {
+        viewModelScope.launch {
+            AlarmPreferences.togglePreviousTimeAlone(ctx)
+        }
+    }
+
     private fun stopFiringAlarmIfNeeded() {
         if (AlarmFiringService.isFiring.value) {
             val intent = Intent(ctx, AlarmFiringService::class.java).apply {
