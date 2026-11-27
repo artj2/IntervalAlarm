@@ -6,9 +6,11 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.CombinedVibration
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
@@ -40,8 +42,14 @@ class TimerService : Service() {
     private val outcomeHandled = AtomicBoolean(false)
     private val activeSessionToken = AtomicLong(0L)
     private val sessionMutex = Mutex()
+    private lateinit var attributedContext: Context
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        attributedContext = createAttributionContext("alarm_firing")
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -246,12 +254,7 @@ class TimerService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.notify(NOTIF_ID_ALMOST_DONE, notif)
 
-        try {
-            val vm = getSystemService(VibratorManager::class.java)
-            vm?.defaultVibrator?.vibrate(
-                VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE)
-            )
-        } catch (_: Exception) {}
+        vibrateAlarm(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
     private fun startDecisionPhase(
@@ -294,14 +297,21 @@ class TimerService : Service() {
         }
     }
 
-    private fun triggerCompletionAlert() {
+    private fun vibrateAlarm(effect: VibrationEffect) {
         try {
-            val vm = getSystemService(VibratorManager::class.java)
-            vm?.defaultVibrator?.vibrate(
-                VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1)
-            )
-        } catch (_: Exception) {}
+            val vm = attributedContext.getSystemService(VibratorManager::class.java) ?: return
+            val combined = CombinedVibration.createParallel(effect)
+            val attrs = VibrationAttributes.Builder()
+                .setUsage(VibrationAttributes.USAGE_ALARM)
+                .build()
+            vm.vibrate(combined, attrs)
+        } catch (e: Exception) {
+            android.util.Log.w("TimerService", "Failed to vibrate", e)
+        }
+    }
 
+    private fun triggerCompletionAlert() {
+        vibrateAlarm(VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1))
         showDecisionNotification()
     }
 
