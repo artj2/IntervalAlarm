@@ -200,28 +200,38 @@ class AlarmFiringService : Service() {
     @Synchronized
     private fun startSound() {
         stopSoundOnly()
-        val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val uri: Uri? = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+        if (uri == null) {
+            android.util.Log.w("AlarmFiring", "No default alarm/notification/ringtone URI available")
+            return
+        }
 
+        var player: MediaPlayer? = null
         try {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                setDataSource(attributedContext, uri)
-                isLooping = true
-                setOnErrorListener { _, what, extra ->
-                    android.util.Log.e("AlarmFiring", "MediaPlayer error: what=$what extra=$extra")
-                    true
-                }
-                prepare()
-                start()
+            val mp = MediaPlayer()
+            player = mp
+            mp.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            mp.setDataSource(attributedContext, uri)
+            mp.isLooping = true
+            mp.setOnErrorListener { _, what, extra ->
+                android.util.Log.e("AlarmFiring", "MediaPlayer error: what=$what extra=$extra")
+                true
             }
+            mp.prepare()
+            mp.start()
+            mediaPlayer = mp
         } catch (e: Exception) {
             android.util.Log.e("AlarmFiring", "Error playing sound", e)
+            try {
+                player?.release()
+            } catch (_: Exception) {}
         }
     }
 
