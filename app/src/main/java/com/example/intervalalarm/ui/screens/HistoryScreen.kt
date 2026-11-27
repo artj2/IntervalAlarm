@@ -3,10 +3,13 @@ package com.example.intervalalarm.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.pluralStringResource
@@ -16,8 +19,26 @@ import com.example.intervalalarm.R
 import com.example.intervalalarm.data.AlarmHistoryEntry
 import com.example.intervalalarm.ui.AlarmViewModel
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+private enum class HistoryClearOption(val labelRes: Int) {
+    KEEP_TODAY(R.string.clear_option_keep_today),
+    KEEP_7_DAYS(R.string.clear_option_keep_7_days),
+    KEEP_30_DAYS(R.string.clear_option_keep_30_days),
+    CLEAR_ALL(R.string.clear_option_clear_all);
+
+    fun cutoffMillis(zone: ZoneId): Long? {
+        val today = LocalDate.now(zone)
+        return when (this) {
+            KEEP_TODAY -> today.atStartOfDay(zone).toInstant().toEpochMilli()
+            KEEP_7_DAYS -> today.minusDays(6).atStartOfDay(zone).toInstant().toEpochMilli()
+            KEEP_30_DAYS -> today.minusDays(29).atStartOfDay(zone).toInstant().toEpochMilli()
+            CLEAR_ALL -> null
+        }
+    }
+}
 
 @Composable
 fun HistoryScreen(vm: AlarmViewModel) {
@@ -50,7 +71,7 @@ fun HistoryScreen(vm: AlarmViewModel) {
             ) {
                 if (entries.isNotEmpty()) {
                     TextButton(onClick = { showClearDialog = true }) {
-                        Text(stringResource(R.string.btn_clear_all), color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.btn_clear), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -80,16 +101,86 @@ fun HistoryScreen(vm: AlarmViewModel) {
     }
 
     if (showClearDialog) {
+        var selectedOption by remember { mutableStateOf(HistoryClearOption.KEEP_30_DAYS) }
+        val zone = ZoneId.systemDefault()
+        val cutoffMillis = selectedOption.cutoffMillis(zone)
+        val deleteCount = if (cutoffMillis == null) {
+            entries.size
+        } else {
+            entries.count { it.timestamp < cutoffMillis }
+        }
+
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
             title = { Text(stringResource(R.string.dialog_clear_title)) },
-            text = { Text(stringResource(R.string.dialog_clear_msg)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.selectableGroup()) {
+                        for (option in HistoryClearOption.entries) {
+                            val selected = option == selectedOption
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected = selected,
+                                        onClick = { selectedOption = option },
+                                        role = Role.RadioButton
+                                    )
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selected,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = stringResource(option.labelRes),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = if (deleteCount > 0) {
+                            pluralStringResource(
+                                R.plurals.dialog_clear_preview,
+                                entries.size,
+                                deleteCount,
+                                entries.size
+                            )
+                        } else {
+                            stringResource(R.string.dialog_clear_none_to_delete)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (deleteCount > 0) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        }
+                    )
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    vm.clearHistory()
-                    showClearDialog = false
-                }) {
-                    Text(stringResource(R.string.btn_clear), color = MaterialTheme.colorScheme.error)
+                TextButton(
+                    enabled = deleteCount > 0,
+                    onClick = {
+                        if (cutoffMillis == null) {
+                            vm.clearHistory()
+                        } else {
+                            vm.clearHistoryBefore(cutoffMillis)
+                        }
+                        showClearDialog = false
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.btn_clear),
+                        color = if (deleteCount > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        }
+                    )
                 }
             },
             dismissButton = {

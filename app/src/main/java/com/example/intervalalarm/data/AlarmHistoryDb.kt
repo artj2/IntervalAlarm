@@ -28,6 +28,9 @@ interface AlarmHistoryDao {
     @Query("UPDATE alarm_history SET status = :status, elapsedTimeSeconds = :elapsedTimeSeconds WHERE id = :id")
     suspend fun updateOutcome(id: Long, status: String, elapsedTimeSeconds: Long)
 
+    @Query("DELETE FROM alarm_history WHERE timestamp < :cutoffMillis")
+    suspend fun deleteBefore(cutoffMillis: Long)
+
     @Query("DELETE FROM alarm_history")
     suspend fun clearAll()
 }
