@@ -1074,7 +1074,6 @@ private fun TimePickerCard(
     onPick: (Int, Int) -> Unit, modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
-    val tpState = rememberTimePickerState(initialHour = hour, initialMinute = minute)
 
     OutlinedCard(onClick = { if (enabled) showDialog = true }, modifier = modifier, enabled = enabled) {
         Column(
@@ -1088,8 +1087,8 @@ private fun TimePickerCard(
             Text(fmtTime(hour, minute), style = textStyle)
         }
     }
-    // ... Dialog logic remains the same ...
     if (showDialog) {
+        val tpState = rememberTimePickerState(initialHour = hour, initialMinute = minute)
         AlertDialog(
             onDismissRequest = { showDialog = false },
             confirmButton = {
